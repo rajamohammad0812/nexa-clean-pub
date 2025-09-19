@@ -17,7 +17,7 @@ type Props = {
   className?: string
 }
 
-export default function LeftSidebar({ className = "" }: Props) {
+export default function LeftSideNav({ className = "" }: Props) {
   const clipPath = "polygon(0 0, calc(100% - 25px) 0, 100% 25px, 100% 100%, 25px 100%, 0 calc(100% - 25px))"
 
   return (

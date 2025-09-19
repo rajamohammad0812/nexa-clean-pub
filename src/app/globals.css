@@ -6,9 +6,9 @@
   :root {
     color-scheme: light dark;
     /* Neon theme variables */
-    --nb-bg: #050d16;
+    --nb-bg: #05181E;
     --nb-bg-2: #081421;
-    --nb-cyan: #00eaff;
+    --nb-cyan: #10F3FE;
     --nb-cyan-2: #00ffd5;
     --nb-border: rgba(0, 234, 255, 0.35);
     --nb-panel: rgba(8, 20, 33, 0.65);
