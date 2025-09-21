@@ -121,7 +121,7 @@ export default function RightSideNav({ className = "" }: Props) {
       {/* Outer container */}
       <div className="absolute inset-0 bg-[#10F3FE]" style={{ clipPath: CARD_CLIP }} />
       <div
-        className="relative bg-[rgba(0,43,47,0.95)] p-4 space-y-2 h-full"
+        className="relative bg-[#002B2F] p-4 space-y-2 h-full"
         style={{
           clipPath: CARD_CLIP,
           transform: 'translate(2px, 2px)',

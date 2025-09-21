@@ -38,7 +38,7 @@ export default function LeftSideNav({ className = "" }: Props) {
 
       {/* Inner container */}
       <div
-        className="relative bg-[#05181E] p-6 pl-0 space-y-2 h-full"
+        className="relative bg-[#002B2F] p-6 pl-0 space-y-2 h-full"
         style={{
           clipPath,
           transform: 'translate(2px, 2px)',
