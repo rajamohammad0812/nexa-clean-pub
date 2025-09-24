@@ -20,7 +20,7 @@ export default function RootLayout({
           Skip to content
         </a>
         <ThemeProvider>
-          <main id="main" className="min-h-screen nb-bg text-foreground">
+          <main id="main" className="h-screen nb-bg text-foreground overflow-hidden">
             {children}
           </main>
         </ThemeProvider>
