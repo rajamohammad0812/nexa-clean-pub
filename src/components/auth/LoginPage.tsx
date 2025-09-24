@@ -165,13 +165,13 @@ export default function LoginPage() {
           >
             {/* Login Box Outer Border */}
             <div
-              className="h-[920px] w-[580px] bg-[#10F3FE]"
+              className="h-[680px] w-[560px] bg-[#10F3FE]"
               style={{ clipPath: loginBoxClipPath }}
             />
 
             {/* Login Box Inner Container */}
             <div
-              className="absolute relative left-0 top-0 flex h-[920px] w-[580px] flex-col justify-start overflow-hidden bg-[#001A1D] p-12 py-16"
+              className="absolute relative left-0 top-0 flex h-[680px] w-[560px] flex-col justify-center overflow-hidden bg-[#001A1D] p-8"
               style={{
                 clipPath: loginBoxClipPath,
                 transform: 'translate(2px, 2px)',
@@ -192,19 +192,19 @@ export default function LoginPage() {
               />
 
               {/* Logo/Brand */}
-              <div className="relative z-10 mb-8 text-center">
-                <h1 className="mb-3 text-4xl font-bold text-[#10F3FE]">Nexa Builder</h1>
-                <p className="text-base text-cyan-200 opacity-80">
+              <div className="relative z-10 mb-4 text-center">
+                <h1 className="mb-2 text-2xl font-bold text-[#10F3FE]">Nexa Builder</h1>
+                <p className="text-xs text-cyan-200 opacity-80">
                   Next Generation Automation Platform
                 </p>
-                <div className="mx-auto mt-4 h-0.5 w-20 bg-gradient-to-r from-transparent via-[#10F3FE] to-transparent" />
+                <div className="mx-auto mt-2 h-0.5 w-12 bg-gradient-to-r from-transparent via-[#10F3FE] to-transparent" />
               </div>
 
               {/* Login Form */}
-              <form onSubmit={handleSubmit} className="relative z-10 space-y-6">
+              <form onSubmit={handleSubmit} className="relative z-10 space-y-3">
                 {/* Email Field */}
-                <div className="space-y-2">
-                  <label htmlFor="email" className="text-sm font-medium text-cyan-100">
+                <div className="space-y-1">
+                  <label htmlFor="email" className="text-xs font-medium text-cyan-100">
                     Email or Username
                   </label>
                   <div className="relative">
@@ -214,7 +214,7 @@ export default function LoginPage() {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full rounded-lg border border-[#10F3FE]/30 bg-[#002B2F] py-3 pl-10 pr-4 text-white placeholder-gray-400 transition-colors focus:border-[#10F3FE] focus:outline-none focus:ring-1 focus:ring-[#10F3FE]/50"
+                      className="w-full rounded-lg border border-[#10F3FE]/30 bg-[#002B2F] py-2 pl-10 pr-4 text-sm text-white placeholder-gray-400 transition-colors focus:border-[#10F3FE] focus:outline-none focus:ring-1 focus:ring-[#10F3FE]/50"
                       placeholder="Enter your email"
                       required
                     />
@@ -222,8 +222,8 @@ export default function LoginPage() {
                 </div>
 
                 {/* Password Field */}
-                <div className="space-y-2">
-                  <label htmlFor="password" className="text-sm font-medium text-cyan-100">
+                <div className="space-y-1">
+                  <label htmlFor="password" className="text-xs font-medium text-cyan-100">
                     Password
                   </label>
                   <div className="relative">
@@ -233,7 +233,7 @@ export default function LoginPage() {
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full rounded-lg border border-[#10F3FE]/30 bg-[#002B2F] py-3 pl-10 pr-12 text-white placeholder-gray-400 transition-colors focus:border-[#10F3FE] focus:outline-none focus:ring-1 focus:ring-[#10F3FE]/50"
+                      className="w-full rounded-lg border border-[#10F3FE]/30 bg-[#002B2F] py-2 pl-10 pr-12 text-sm text-white placeholder-gray-400 transition-colors focus:border-[#10F3FE] focus:outline-none focus:ring-1 focus:ring-[#10F3FE]/50"
                       placeholder="Enter your password"
                       required
                     />
@@ -248,11 +248,11 @@ export default function LoginPage() {
                 </div>
 
                 {/* Remember Me & Forgot Password */}
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center justify-between text-xs">
                   <label className="flex items-center text-cyan-200">
                     <input
                       type="checkbox"
-                      className="mr-2 h-4 w-4 rounded border border-[#10F3FE]/30 bg-[#002B2F] text-[#10F3FE] focus:ring-1 focus:ring-[#10F3FE]/50"
+                      className="mr-1 h-3 w-3 rounded border border-[#10F3FE]/30 bg-[#002B2F] text-[#10F3FE] focus:ring-1 focus:ring-[#10F3FE]/50"
                     />
                     Remember me
                   </label>
@@ -268,7 +268,7 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="flex w-full items-center justify-center rounded-lg bg-[#10F3FE] py-3 font-medium text-black transition-colors hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex w-full items-center justify-center rounded-lg bg-[#10F3FE] py-2 text-sm font-medium text-black transition-colors hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isLoading ? (
                     <>
@@ -282,45 +282,45 @@ export default function LoginPage() {
               </form>
 
               {/* Divider */}
-              <div className="relative z-10 my-6 flex items-center">
+              <div className="relative z-10 my-3 flex items-center">
                 <hr className="flex-1 border-[#10F3FE]/30" />
-                <span className="px-4 text-sm text-cyan-200">or continue with</span>
+                <span className="px-2 text-xs text-cyan-200">or continue with</span>
                 <hr className="flex-1 border-[#10F3FE]/30" />
               </div>
 
               {/* Social Login Buttons */}
-              <div className="relative z-10 space-y-4">
+              <div className="relative z-10 space-y-2">
                 <button
                   type="button"
                   onClick={() => handleSocialLogin('google')}
-                  className="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white py-3 font-medium text-black transition-colors hover:bg-gray-100"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white py-2 text-xs font-medium text-black transition-colors hover:bg-gray-100"
                 >
-                  <Chrome className="h-5 w-5" />
+                  <Chrome className="h-3 w-3" />
                   Continue with Google
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handleSocialLogin('github')}
-                  className="flex w-full items-center justify-center gap-3 rounded-lg bg-[#24292e] py-3 font-medium text-white transition-colors hover:bg-[#1a1e22]"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#24292e] py-2 text-xs font-medium text-white transition-colors hover:bg-[#1a1e22]"
                 >
-                  <Github className="h-5 w-5" />
+                  <Github className="h-3 w-3" />
                   Continue with GitHub
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handleSocialLogin('azure-ad')}
-                  className="flex w-full items-center justify-center gap-3 rounded-lg bg-[#0078d4] py-3 font-medium text-white transition-colors hover:bg-[#106ebe]"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#0078d4] py-2 text-xs font-medium text-white transition-colors hover:bg-[#106ebe]"
                 >
-                  <Mail className="h-5 w-5" />
+                  <Mail className="h-3 w-3" />
                   Continue with Microsoft
                 </button>
               </div>
 
               {/* Sign Up Link */}
-              <div className="relative z-10 mt-6 text-center">
-                <span className="text-sm text-cyan-200">
+              <div className="relative z-10 mt-2 text-center">
+                <span className="text-xs text-cyan-200">
                   Don&apos;t have an account?{' '}
                   <button
                     type="button"
