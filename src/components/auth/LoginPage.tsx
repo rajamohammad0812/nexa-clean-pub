@@ -78,22 +78,100 @@ export default function LoginPage() {
             }}
           />
 
+          {/* Animated Background Elements */}
+          <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            {/* Floating Geometric Shapes */}
+            <div className="absolute left-1/4 top-1/4 h-32 w-32 rotate-45 animate-pulse border border-[#10F3FE]/20" />
+            <div
+              className="absolute right-1/4 top-3/4 h-24 w-24 rotate-12 animate-bounce border border-[#10F3FE]/30"
+              style={{ animationDuration: '3s' }}
+            />
+            <div
+              className="left-1/6 absolute top-1/2 h-16 w-16 -rotate-45 animate-pulse border border-[#10F3FE]/25"
+              style={{ animationDelay: '1s' }}
+            />
+            <div
+              className="absolute bottom-1/4 left-3/4 h-20 w-20 rotate-45 animate-bounce border border-[#10F3FE]/20"
+              style={{ animationDuration: '4s', animationDelay: '2s' }}
+            />
+
+            {/* Animated Circuit Lines */}
+            <div className="absolute left-0 top-0 h-full w-full">
+              {/* Horizontal lines */}
+              <div className="absolute left-0 top-1/4 h-0.5 w-1/3 animate-pulse bg-gradient-to-r from-transparent via-[#10F3FE]/30 to-transparent" />
+              <div
+                className="absolute right-0 top-3/4 h-0.5 w-1/4 animate-pulse bg-gradient-to-l from-transparent via-[#10F3FE]/40 to-transparent"
+                style={{ animationDelay: '1s' }}
+              />
+              <div
+                className="absolute left-1/4 top-1/2 h-0.5 w-1/2 animate-pulse bg-gradient-to-r from-transparent via-[#10F3FE]/20 to-transparent"
+                style={{ animationDelay: '2s' }}
+              />
+
+              {/* Vertical lines */}
+              <div
+                className="absolute left-1/4 top-0 h-1/3 w-0.5 animate-pulse bg-gradient-to-b from-transparent via-[#10F3FE]/30 to-transparent"
+                style={{ animationDelay: '0.5s' }}
+              />
+              <div
+                className="absolute bottom-0 right-1/3 h-1/4 w-0.5 animate-pulse bg-gradient-to-t from-transparent via-[#10F3FE]/40 to-transparent"
+                style={{ animationDelay: '1.5s' }}
+              />
+              <div
+                className="absolute right-1/4 top-1/3 h-1/2 w-0.5 animate-pulse bg-gradient-to-b from-transparent via-[#10F3FE]/25 to-transparent"
+                style={{ animationDelay: '2.5s' }}
+              />
+            </div>
+
+            {/* Glowing Orbs */}
+            <div
+              className="top-1/6 right-1/6 absolute h-4 w-4 animate-ping rounded-full bg-[#10F3FE]/60 blur-sm"
+              style={{ animationDuration: '2s' }}
+            />
+            <div
+              className="bottom-1/6 left-1/6 absolute h-3 w-3 animate-ping rounded-full bg-[#10F3FE]/50 blur-sm"
+              style={{ animationDuration: '3s', animationDelay: '1s' }}
+            />
+            <div
+              className="absolute left-1/3 top-2/3 h-2 w-2 animate-ping rounded-full bg-[#10F3FE]/70 blur-sm"
+              style={{ animationDuration: '2.5s', animationDelay: '0.5s' }}
+            />
+
+            {/* Data Stream Effect */}
+            <div className="absolute right-1/4 top-0 h-full w-px opacity-30">
+              <div
+                className="h-20 w-full animate-pulse bg-gradient-to-b from-[#10F3FE] to-transparent"
+                style={{ animationDuration: '1.5s' }}
+              />
+            </div>
+            <div className="absolute left-1/3 top-0 h-full w-px opacity-20">
+              <div
+                className="h-16 w-full animate-pulse bg-gradient-to-b from-[#10F3FE] to-transparent"
+                style={{ animationDuration: '2s', animationDelay: '0.7s' }}
+              />
+            </div>
+          </div>
+
           {/* Login Box */}
           <div
             className="relative z-10"
             style={{
               filter: `
-                drop-shadow(0 0 20px rgba(16, 243, 254, 0.4))
-                drop-shadow(0 0 30px rgba(16, 243, 254, 0.2))
+                drop-shadow(0 0 30px rgba(16, 243, 254, 0.5))
+                drop-shadow(0 0 50px rgba(16, 243, 254, 0.3))
+                drop-shadow(0 0 80px rgba(16, 243, 254, 0.1))
               `,
             }}
           >
             {/* Login Box Outer Border */}
-            <div className="h-[500px] w-96 bg-[#10F3FE]" style={{ clipPath: loginBoxClipPath }} />
+            <div
+              className="h-[820px] w-[520px] bg-[#10F3FE]"
+              style={{ clipPath: loginBoxClipPath }}
+            />
 
             {/* Login Box Inner Container */}
             <div
-              className="absolute left-0 top-0 flex h-[500px] w-96 flex-col justify-center bg-[#001A1D] p-8"
+              className="absolute relative left-0 top-0 flex h-[820px] w-[520px] flex-col justify-center overflow-hidden bg-[#001A1D] p-10"
               style={{
                 clipPath: loginBoxClipPath,
                 transform: 'translate(2px, 2px)',
@@ -101,16 +179,29 @@ export default function LoginPage() {
                 height: 'calc(100% - 4px)',
               }}
             >
+              {/* Inner Box Background Pattern */}
+              <div
+                className="absolute inset-0 opacity-5"
+                style={{
+                  backgroundImage: `
+                    radial-gradient(circle at 25% 25%, rgba(16, 243, 254, 0.3) 1px, transparent 1px),
+                    radial-gradient(circle at 75% 75%, rgba(16, 243, 254, 0.3) 1px, transparent 1px)
+                  `,
+                  backgroundSize: '30px 30px',
+                }}
+              />
+
               {/* Logo/Brand */}
-              <div className="mb-8 text-center">
+              <div className="relative z-10 mb-6 text-center">
                 <h1 className="mb-2 text-3xl font-bold text-[#10F3FE]">Nexa Builder</h1>
                 <p className="text-sm text-cyan-200 opacity-80">
                   Next Generation Automation Platform
                 </p>
+                <div className="mx-auto mt-3 h-0.5 w-16 bg-gradient-to-r from-transparent via-[#10F3FE] to-transparent" />
               </div>
 
               {/* Login Form */}
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="relative z-10 space-y-4">
                 {/* Email Field */}
                 <div className="space-y-2">
                   <label htmlFor="email" className="text-sm font-medium text-cyan-100">
@@ -190,46 +281,46 @@ export default function LoginPage() {
                 </button>
               </form>
 
+              {/* Divider */}
+              <div className="relative z-10 my-4 flex items-center">
+                <hr className="flex-1 border-[#10F3FE]/30" />
+                <span className="px-3 text-xs text-cyan-200">or continue with</span>
+                <hr className="flex-1 border-[#10F3FE]/30" />
+              </div>
+
               {/* Social Login Buttons */}
-              <div className="mt-6 space-y-3">
+              <div className="relative z-10 space-y-3">
                 <button
                   type="button"
                   onClick={() => handleSocialLogin('google')}
-                  className="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white py-3 font-medium text-black transition-colors hover:bg-gray-100"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white py-2.5 text-sm font-medium text-black transition-colors hover:bg-gray-100"
                 >
-                  <Chrome className="h-5 w-5" />
+                  <Chrome className="h-4 w-4" />
                   Continue with Google
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handleSocialLogin('github')}
-                  className="flex w-full items-center justify-center gap-3 rounded-lg bg-[#24292e] py-3 font-medium text-white transition-colors hover:bg-[#1a1e22]"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#24292e] py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#1a1e22]"
                 >
-                  <Github className="h-5 w-5" />
+                  <Github className="h-4 w-4" />
                   Continue with GitHub
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handleSocialLogin('azure-ad')}
-                  className="flex w-full items-center justify-center gap-3 rounded-lg bg-[#0078d4] py-3 font-medium text-white transition-colors hover:bg-[#106ebe]"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#0078d4] py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#106ebe]"
                 >
-                  <Mail className="h-5 w-5" />
+                  <Mail className="h-4 w-4" />
                   Continue with Microsoft
                 </button>
               </div>
 
-              {/* Divider */}
-              <div className="my-6 flex items-center">
-                <hr className="flex-1 border-[#10F3FE]/30" />
-                <span className="px-4 text-sm text-cyan-200">or</span>
-                <hr className="flex-1 border-[#10F3FE]/30" />
-              </div>
-
               {/* Sign Up Link */}
-              <div className="text-center">
-                <span className="text-sm text-cyan-200">
+              <div className="relative z-10 mt-4 text-center">
+                <span className="text-xs text-cyan-200">
                   Don&apos;t have an account?{' '}
                   <button
                     type="button"
@@ -241,10 +332,6 @@ export default function LoginPage() {
               </div>
             </div>
           </div>
-
-          {/* Decorative Elements */}
-          <div className="absolute left-10 top-10 h-20 w-20 rotate-45 transform border border-[#10F3FE]/20" />
-          <div className="absolute bottom-10 right-10 h-16 w-16 rotate-45 transform border border-[#10F3FE]/20" />
 
           {/* Corner Accent Lines */}
           <div className="absolute left-0 top-0 h-20 w-20">
