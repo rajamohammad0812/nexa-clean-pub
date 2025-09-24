@@ -42,7 +42,7 @@ export default function LoginPage() {
     'polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px))'
 
   return (
-    <div className="nb-bg flex h-screen overflow-hidden p-4">
+    <div className="nb-bg h-screen overflow-hidden p-4">
       {/* Fullscreen Frame Container */}
       <div
         className="relative h-full w-full"
@@ -171,164 +171,174 @@ export default function LoginPage() {
 
             {/* Login Box Inner Container */}
             <div
-              className="absolute relative left-0 top-0 flex h-[680px] w-[560px] flex-col justify-center overflow-hidden bg-[#001A1D] p-8"
+              className="relative flex h-[680px] w-[560px] flex-col items-center justify-center overflow-hidden bg-[#001A1D] p-8"
               style={{
                 clipPath: loginBoxClipPath,
                 transform: 'translate(2px, 2px)',
                 width: 'calc(100% - 4px)',
                 height: 'calc(100% - 4px)',
+                position: 'absolute',
+                top: '0',
+                left: '0',
               }}
             >
-              {/* Inner Box Background Pattern */}
-              <div
-                className="absolute inset-0 opacity-5"
-                style={{
-                  backgroundImage: `
+              {/* Content Wrapper */}
+              <div className="flex h-full w-full max-w-md flex-col justify-center space-y-4">
+                {/* Inner Box Background Pattern */}
+                <div
+                  className="absolute inset-0 opacity-5"
+                  style={{
+                    backgroundImage: `
                     radial-gradient(circle at 25% 25%, rgba(16, 243, 254, 0.3) 1px, transparent 1px),
                     radial-gradient(circle at 75% 75%, rgba(16, 243, 254, 0.3) 1px, transparent 1px)
                   `,
-                  backgroundSize: '30px 30px',
-                }}
-              />
+                    backgroundSize: '30px 30px',
+                  }}
+                />
 
-              {/* Logo/Brand */}
-              <div className="relative z-10 mb-4 text-center">
-                <h1 className="mb-2 text-2xl font-bold text-[#10F3FE]">Nexa Builder</h1>
-                <p className="text-xs text-cyan-200 opacity-80">
-                  Next Generation Automation Platform
-                </p>
-                <div className="mx-auto mt-2 h-0.5 w-12 bg-gradient-to-r from-transparent via-[#10F3FE] to-transparent" />
-              </div>
-
-              {/* Login Form */}
-              <form onSubmit={handleSubmit} className="relative z-10 space-y-3">
-                {/* Email Field */}
-                <div className="space-y-1">
-                  <label htmlFor="email" className="text-xs font-medium text-cyan-100">
-                    Email or Username
-                  </label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-cyan-300" />
-                    <input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full rounded-lg border border-[#10F3FE]/30 bg-[#002B2F] py-2 pl-10 pr-4 text-sm text-white placeholder-gray-400 transition-colors focus:border-[#10F3FE] focus:outline-none focus:ring-1 focus:ring-[#10F3FE]/50"
-                      placeholder="Enter your email"
-                      required
-                    />
-                  </div>
+                {/* Logo/Brand */}
+                <div className="relative z-10 mb-6 text-center">
+                  <h1 className="mb-3 text-3xl font-bold text-[#10F3FE]">Nexa Builder</h1>
+                  <p className="text-sm text-cyan-200 opacity-80">
+                    Next Generation Automation Platform
+                  </p>
+                  <div className="mx-auto mt-3 h-0.5 w-16 bg-gradient-to-r from-transparent via-[#10F3FE] to-transparent" />
                 </div>
 
-                {/* Password Field */}
-                <div className="space-y-1">
-                  <label htmlFor="password" className="text-xs font-medium text-cyan-100">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-cyan-300" />
-                    <input
-                      id="password"
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full rounded-lg border border-[#10F3FE]/30 bg-[#002B2F] py-2 pl-10 pr-12 text-sm text-white placeholder-gray-400 transition-colors focus:border-[#10F3FE] focus:outline-none focus:ring-1 focus:ring-[#10F3FE]/50"
-                      placeholder="Enter your password"
-                      required
-                    />
+                {/* Login Form */}
+                <form onSubmit={handleSubmit} className="relative z-10 space-y-4">
+                  {/* Email Field */}
+                  <div className="space-y-2">
+                    <label htmlFor="email" className="text-sm font-medium text-cyan-100">
+                      Email or Username
+                    </label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 transform text-cyan-300" />
+                      <input
+                        id="email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full rounded-lg border border-[#10F3FE]/30 bg-[#002B2F] py-3 pl-11 pr-4 text-base text-white placeholder-gray-400 transition-colors focus:border-[#10F3FE] focus:outline-none focus:ring-1 focus:ring-[#10F3FE]/50"
+                        placeholder="Enter your email"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* Password Field */}
+                  <div className="space-y-2">
+                    <label htmlFor="password" className="text-sm font-medium text-cyan-100">
+                      Password
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 transform text-cyan-300" />
+                      <input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full rounded-lg border border-[#10F3FE]/30 bg-[#002B2F] py-3 pl-11 pr-12 text-base text-white placeholder-gray-400 transition-colors focus:border-[#10F3FE] focus:outline-none focus:ring-1 focus:ring-[#10F3FE]/50"
+                        placeholder="Enter your password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 transform text-cyan-300 transition-colors hover:text-[#10F3FE]"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-5 w-5" />
+                        ) : (
+                          <Eye className="h-5 w-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Remember Me & Forgot Password */}
+                  <div className="flex items-center justify-between text-sm">
+                    <label className="flex items-center text-cyan-200">
+                      <input
+                        type="checkbox"
+                        className="mr-2 h-4 w-4 rounded border border-[#10F3FE]/30 bg-[#002B2F] text-[#10F3FE] focus:ring-1 focus:ring-[#10F3FE]/50"
+                      />
+                      Remember me
+                    </label>
                     <button
                       type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 transform text-cyan-300 transition-colors hover:text-[#10F3FE]"
+                      className="text-[#10F3FE] transition-colors hover:text-cyan-200"
                     >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      Forgot password?
                     </button>
                   </div>
+
+                  {/* Login Button */}
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="flex w-full items-center justify-center rounded-lg bg-[#10F3FE] py-3 text-base font-medium text-black transition-colors hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isLoading ? (
+                      <>
+                        <div className="mr-2 h-5 w-5 animate-spin rounded-full border-2 border-black border-t-transparent" />
+                        Signing In...
+                      </>
+                    ) : (
+                      'Sign In'
+                    )}
+                  </button>
+                </form>
+
+                {/* Divider */}
+                <div className="relative z-10 my-4 flex items-center">
+                  <hr className="flex-1 border-[#10F3FE]/30" />
+                  <span className="px-3 text-sm text-cyan-200">or continue with</span>
+                  <hr className="flex-1 border-[#10F3FE]/30" />
                 </div>
 
-                {/* Remember Me & Forgot Password */}
-                <div className="flex items-center justify-between text-xs">
-                  <label className="flex items-center text-cyan-200">
-                    <input
-                      type="checkbox"
-                      className="mr-1 h-3 w-3 rounded border border-[#10F3FE]/30 bg-[#002B2F] text-[#10F3FE] focus:ring-1 focus:ring-[#10F3FE]/50"
-                    />
-                    Remember me
-                  </label>
+                {/* Social Login Buttons */}
+                <div className="relative z-10 space-y-3">
                   <button
                     type="button"
-                    className="text-[#10F3FE] transition-colors hover:text-cyan-200"
+                    onClick={() => handleSocialLogin('google')}
+                    className="flex w-full items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white py-3 text-sm font-medium text-black transition-colors hover:bg-gray-100"
                   >
-                    Forgot password?
+                    <Chrome className="h-4 w-4" />
+                    Continue with Google
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSocialLogin('github')}
+                    className="flex w-full items-center justify-center gap-3 rounded-lg bg-[#24292e] py-3 text-sm font-medium text-white transition-colors hover:bg-[#1a1e22]"
+                  >
+                    <Github className="h-4 w-4" />
+                    Continue with GitHub
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSocialLogin('azure-ad')}
+                    className="flex w-full items-center justify-center gap-3 rounded-lg bg-[#0078d4] py-3 text-sm font-medium text-white transition-colors hover:bg-[#106ebe]"
+                  >
+                    <Mail className="h-4 w-4" />
+                    Continue with Microsoft
                   </button>
                 </div>
 
-                {/* Login Button */}
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="flex w-full items-center justify-center rounded-lg bg-[#10F3FE] py-2 text-sm font-medium text-black transition-colors hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isLoading ? (
-                    <>
-                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-black border-t-transparent" />
-                      Signing In...
-                    </>
-                  ) : (
-                    'Sign In'
-                  )}
-                </button>
-              </form>
-
-              {/* Divider */}
-              <div className="relative z-10 my-3 flex items-center">
-                <hr className="flex-1 border-[#10F3FE]/30" />
-                <span className="px-2 text-xs text-cyan-200">or continue with</span>
-                <hr className="flex-1 border-[#10F3FE]/30" />
-              </div>
-
-              {/* Social Login Buttons */}
-              <div className="relative z-10 space-y-2">
-                <button
-                  type="button"
-                  onClick={() => handleSocialLogin('google')}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white py-2 text-xs font-medium text-black transition-colors hover:bg-gray-100"
-                >
-                  <Chrome className="h-3 w-3" />
-                  Continue with Google
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSocialLogin('github')}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#24292e] py-2 text-xs font-medium text-white transition-colors hover:bg-[#1a1e22]"
-                >
-                  <Github className="h-3 w-3" />
-                  Continue with GitHub
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSocialLogin('azure-ad')}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#0078d4] py-2 text-xs font-medium text-white transition-colors hover:bg-[#106ebe]"
-                >
-                  <Mail className="h-3 w-3" />
-                  Continue with Microsoft
-                </button>
-              </div>
-
-              {/* Sign Up Link */}
-              <div className="relative z-10 mt-2 text-center">
-                <span className="text-xs text-cyan-200">
-                  Don&apos;t have an account?{' '}
-                  <button
-                    type="button"
-                    className="font-medium text-[#10F3FE] transition-colors hover:text-cyan-300"
-                  >
-                    Sign up here
-                  </button>
-                </span>
+                {/* Sign Up Link */}
+                <div className="relative z-10 mt-4 text-center">
+                  <span className="text-sm text-cyan-200">
+                    Don&apos;t have an account?{' '}
+                    <button
+                      type="button"
+                      className="font-medium text-[#10F3FE] transition-colors hover:text-cyan-300"
+                    >
+                      Sign up here
+                    </button>
+                  </span>
+                </div>
               </div>
             </div>
           </div>
