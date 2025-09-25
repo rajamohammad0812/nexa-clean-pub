@@ -45,6 +45,11 @@ export default function UserProfileDropdown({ className = "" }: UserProfileDropd
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  // Debug logging
+  console.log('UserProfileDropdown - Session status:', status)
+  console.log('UserProfileDropdown - Session data:', session)
+  console.log('UserProfileDropdown - Dropdown open:', isOpen)
+
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -59,19 +64,48 @@ export default function UserProfileDropdown({ className = "" }: UserProfileDropd
     }
   }, [])
 
-  // Don't render if not authenticated
+  // Always show the dropdown for now (for testing)
   if (status === 'loading') {
     return (
       <CutoutShell className={`h-[45px] w-[140px] ${className}`}>
         <div className="flex items-center justify-center px-3 py-2">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#10F3FE] border-t-transparent"></div>
+          <span className="ml-2 text-white text-sm">Loading...</span>
         </div>
       </CutoutShell>
     )
   }
 
+  // Show a placeholder if not authenticated (for testing purposes)
   if (status === 'unauthenticated' || !session) {
-    return null
+    return (
+      <div className={`relative ${className}`} ref={dropdownRef}>
+        <CutoutShell className="h-[45px] w-[140px] cursor-pointer" onClick={() => setIsOpen(!isOpen)}>
+          <div className="flex items-center justify-between px-3 py-2">
+            <div className="flex items-center gap-2">
+              <User className="h-5 w-5 text-[#10F3FE]" />
+              <span className="text-white text-sm font-medium">Guest</span>
+            </div>
+            <ChevronDown className={`h-4 w-4 text-[#10F3FE] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          </div>
+        </CutoutShell>
+        
+        {/* Simple test dropdown */}
+        {isOpen && (
+          <div className="absolute right-0 top-full mt-2 w-64 bg-black border-2 border-[#10F3FE] rounded-lg shadow-2xl z-[9999]">
+            <div className="p-4">
+              <p className="text-white text-sm mb-2">You are not logged in</p>
+              <button 
+                onClick={() => router.push('/auth/signin')}
+                className="w-full bg-[#10F3FE] text-black px-4 py-2 rounded text-sm font-medium"
+              >
+                Sign In
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    )
   }
 
   const userName = session.user?.name || session.user?.email?.split('@')[0] || 'User'
@@ -119,20 +153,10 @@ export default function UserProfileDropdown({ className = "" }: UserProfileDropd
         </div>
       </CutoutShell>
 
-      {/* Dropdown Menu */}
+      {/* Dropdown Menu - Simplified for better visibility */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-64 z-[9999] shadow-2xl">
+        <div className="absolute right-0 top-full mt-2 w-64 bg-[#05181E] border-2 border-[#10F3FE] rounded-lg shadow-2xl z-[9999]">
           <div className="relative">
-            <div className="absolute inset-0 bg-[#10F3FE] rounded-lg" style={{ clipPath: CLIP }} />
-            <div 
-              className="relative bg-[#05181E] border border-[#10F3FE]/30 rounded-lg"
-              style={{
-                clipPath: CLIP,
-                transform: 'translate(2px, 2px)',
-                width: 'calc(100% - 4px)',
-                height: 'calc(100% - 4px)',
-              }}
-            >
               <div className="py-2">
                 {/* User Info Section */}
                 <div className="px-4 py-3 border-b border-[#10F3FE]/20">
@@ -184,7 +208,6 @@ export default function UserProfileDropdown({ className = "" }: UserProfileDropd
                   </div>
                 </div>
               </div>
-            </div>
           </div>
         </div>
       )}
