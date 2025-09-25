@@ -1,32 +1,46 @@
 'use client'
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, User, Lock } from 'lucide-react'
 import { Github, Mail, Chrome } from 'lucide-react'
 
 export default function LoginPage() {
+  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError('')
 
     try {
+      console.log('Attempting login with:', { email, password })
       const result = await signIn('credentials', {
         email,
         password,
         redirect: false,
       })
 
+      console.log('Login result:', result)
+
       if (result?.error) {
         console.error('Login failed:', result.error)
-        // You can add error handling here
+        setError('Invalid email or password')
+      } else if (result?.ok) {
+        console.log('Login successful, redirecting...')
+        // Redirect to dashboard on successful login
+        router.push('/')
+      } else {
+        setError('Login failed. Please try again.')
       }
     } catch (error) {
       console.error('Login error:', error)
+      setError('An error occurred during login')
     } finally {
       setIsLoading(false)
     }
@@ -272,6 +286,13 @@ export default function LoginPage() {
                       Forgot password?
                     </button>
                   </div>
+
+                  {/* Error Display */}
+                  {error && (
+                    <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3 text-center text-sm text-red-300">
+                      {error}
+                    </div>
+                  )}
 
                   {/* Login Button */}
                   <button
