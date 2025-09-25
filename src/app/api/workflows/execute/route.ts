@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth/config'
+import { authOptions } from '@/lib/auth'
 import { workflowEngine } from '@/lib/workflow/engine'
 import { prisma } from '@/lib/prisma'
 

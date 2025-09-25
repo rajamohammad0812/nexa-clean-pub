@@ -2,14 +2,15 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { User, Settings, LogOut, ChevronDown, Key } from 'lucide-react'
+import { User, LogOut, ChevronDown, Key } from 'lucide-react'
 
-const CLIP = "polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)"
+const CLIP =
+  'polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)'
 
 function CutoutShell({
   clip = CLIP,
-  className = "",
-  innerClassName = "",
+  className = '',
+  innerClassName = '',
   children,
 }: {
   clip?: string
@@ -39,7 +40,7 @@ interface UserProfileDropdownProps {
   className?: string
 }
 
-export default function UserProfileDropdown({ className = "" }: UserProfileDropdownProps) {
+export default function UserProfileDropdown({ className = '' }: UserProfileDropdownProps) {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
@@ -77,7 +78,7 @@ export default function UserProfileDropdown({ className = "" }: UserProfileDropd
       <CutoutShell className={`h-[45px] w-[140px] ${className}`}>
         <div className="flex items-center justify-center px-3 py-2">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#10F3FE] border-t-transparent"></div>
-          <span className="ml-2 text-white text-sm">Loading...</span>
+          <span className="ml-2 text-sm text-white">Loading...</span>
         </div>
       </CutoutShell>
     )
@@ -87,28 +88,30 @@ export default function UserProfileDropdown({ className = "" }: UserProfileDropd
   if (status === 'unauthenticated' || !session) {
     return (
       <div className={`relative ${className}`} ref={dropdownRef}>
-        <button 
+        <button
           onClick={handleButtonClick}
-          className="h-[45px] w-[140px] bg-black border-2 border-[#10F3FE] flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-[#10F3FE]/10 transition-colors"
+          className="flex h-[45px] w-[140px] cursor-pointer items-center justify-between border-2 border-[#10F3FE] bg-black px-3 py-2 transition-colors hover:bg-[#10F3FE]/10"
           style={{
-            clipPath: CLIP
+            clipPath: CLIP,
           }}
         >
           <div className="flex items-center gap-2">
             <User className="h-5 w-5 text-[#10F3FE]" />
-            <span className="text-white text-sm font-medium">Guest</span>
+            <span className="text-sm font-medium text-white">Guest</span>
           </div>
-          <ChevronDown className={`h-4 w-4 text-[#10F3FE] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown
+            className={`h-4 w-4 text-[#10F3FE] transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          />
         </button>
-        
+
         {/* Simple test dropdown */}
         {isOpen && (
-          <div className="absolute right-0 top-full mt-2 w-64 bg-black border-2 border-[#10F3FE] rounded-lg shadow-2xl z-[9999]">
+          <div className="absolute right-0 top-full z-[9999] mt-2 w-64 rounded-lg border-2 border-[#10F3FE] bg-black shadow-2xl">
             <div className="p-4">
-              <p className="text-white text-sm mb-2">You are not logged in</p>
-              <button 
+              <p className="mb-2 text-sm text-white">You are not logged in</p>
+              <button
                 onClick={() => router.push('/auth/signin')}
-                className="w-full bg-[#10F3FE] text-black px-4 py-2 rounded text-sm font-medium hover:bg-[#10F3FE]/80 transition-colors"
+                className="w-full rounded bg-[#10F3FE] px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-[#10F3FE]/80"
               >
                 Sign In
               </button>
@@ -142,89 +145,83 @@ export default function UserProfileDropdown({ className = "" }: UserProfileDropd
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
       {/* User Button */}
-      <button 
+      <button
         onClick={handleButtonClick}
-        className="h-[45px] w-[140px] bg-black border-2 border-[#10F3FE] cursor-pointer hover:bg-[#10F3FE]/10 transition-colors"
+        className="h-[45px] w-[140px] cursor-pointer border-2 border-[#10F3FE] bg-black transition-colors hover:bg-[#10F3FE]/10"
         style={{
-          clipPath: CLIP
+          clipPath: CLIP,
         }}
       >
         <div className="flex items-center justify-between px-3 py-2">
           <div className="flex items-center gap-2">
             {session.user?.image ? (
-              <img
-                src={session.user.image}
-                alt="User Avatar"
-                className="h-6 w-6 rounded-full"
-              />
+              <img src={session.user.image} alt="User Avatar" className="h-6 w-6 rounded-full" />
             ) : (
               <User className="h-5 w-5 text-[#10F3FE]" />
             )}
-            <span className="text-white text-sm font-medium truncate max-w-[60px]">
-              {userName}
-            </span>
+            <span className="max-w-[60px] truncate text-sm font-medium text-white">{userName}</span>
           </div>
-          <ChevronDown 
-            className={`h-4 w-4 text-[#10F3FE] transition-transform ${isOpen ? 'rotate-180' : ''}`} 
+          <ChevronDown
+            className={`h-4 w-4 text-[#10F3FE] transition-transform ${isOpen ? 'rotate-180' : ''}`}
           />
         </div>
       </button>
 
       {/* Dropdown Menu - Simplified for better visibility */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-64 bg-[#05181E] border-2 border-[#10F3FE] rounded-lg shadow-2xl z-[9999]">
+        <div className="absolute right-0 top-full z-[9999] mt-2 w-64 rounded-lg border-2 border-[#10F3FE] bg-[#05181E] shadow-2xl">
           <div className="relative">
-              <div className="py-2">
-                {/* User Info Section */}
-                <div className="px-4 py-3 border-b border-[#10F3FE]/20">
-                  <div className="flex items-center gap-3">
-                    {session.user?.image ? (
-                      <img
-                        src={session.user.image}
-                        alt="User Avatar"
-                        className="h-10 w-10 rounded-full border-2 border-[#10F3FE]/30"
-                      />
-                    ) : (
-                      <div className="h-10 w-10 rounded-full bg-[#10F3FE]/20 border-2 border-[#10F3FE]/30 flex items-center justify-center">
-                        <User className="h-6 w-6 text-[#10F3FE]" />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white font-medium truncate text-sm">{userName}</p>
-                      <p className="text-cyan-300/70 text-xs truncate">{userEmail}</p>
+            <div className="py-2">
+              {/* User Info Section */}
+              <div className="border-b border-[#10F3FE]/20 px-4 py-3">
+                <div className="flex items-center gap-3">
+                  {session.user?.image ? (
+                    <img
+                      src={session.user.image}
+                      alt="User Avatar"
+                      className="h-10 w-10 rounded-full border-2 border-[#10F3FE]/30"
+                    />
+                  ) : (
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-[#10F3FE]/30 bg-[#10F3FE]/20">
+                      <User className="h-6 w-6 text-[#10F3FE]" />
                     </div>
-                  </div>
-                </div>
-
-                {/* Menu Items */}
-                <div className="py-1">
-                  <button
-                    onClick={handleProfileClick}
-                    className="flex items-center gap-3 w-full px-4 py-3 text-left text-white hover:bg-[#10F3FE]/10 transition-all duration-200 hover:text-[#10F3FE]"
-                  >
-                    <User className="h-4 w-4 text-[#10F3FE]" />
-                    <span className="font-medium">Profile</span>
-                  </button>
-
-                  <button
-                    onClick={handleResetPassword}
-                    className="flex items-center gap-3 w-full px-4 py-3 text-left text-white hover:bg-[#10F3FE]/10 transition-all duration-200 hover:text-[#10F3FE]"
-                  >
-                    <Key className="h-4 w-4 text-[#10F3FE]" />
-                    <span className="font-medium">Reset Password</span>
-                  </button>
-
-                  <div className="border-t border-[#10F3FE]/20 mt-1 pt-1">
-                    <button
-                      onClick={handleSignOut}
-                      className="flex items-center gap-3 w-full px-4 py-3 text-left text-red-300 hover:bg-red-500/10 transition-all duration-200 hover:text-red-200"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      <span className="font-medium">Sign Out</span>
-                    </button>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-white">{userName}</p>
+                    <p className="truncate text-xs text-cyan-300/70">{userEmail}</p>
                   </div>
                 </div>
               </div>
+
+              {/* Menu Items */}
+              <div className="py-1">
+                <button
+                  onClick={handleProfileClick}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left text-white transition-all duration-200 hover:bg-[#10F3FE]/10 hover:text-[#10F3FE]"
+                >
+                  <User className="h-4 w-4 text-[#10F3FE]" />
+                  <span className="font-medium">Profile</span>
+                </button>
+
+                <button
+                  onClick={handleResetPassword}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left text-white transition-all duration-200 hover:bg-[#10F3FE]/10 hover:text-[#10F3FE]"
+                >
+                  <Key className="h-4 w-4 text-[#10F3FE]" />
+                  <span className="font-medium">Reset Password</span>
+                </button>
+
+                <div className="mt-1 border-t border-[#10F3FE]/20 pt-1">
+                  <button
+                    onClick={handleSignOut}
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left text-red-300 transition-all duration-200 hover:bg-red-500/10 hover:text-red-200"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span className="font-medium">Sign Out</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
