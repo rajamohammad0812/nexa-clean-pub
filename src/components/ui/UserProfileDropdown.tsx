@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { User, Settings, LogOut, ChevronDown } from 'lucide-react'
+import { User, Settings, LogOut, ChevronDown, Key } from 'lucide-react'
 
 const CLIP = "polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)"
 
@@ -78,12 +78,19 @@ export default function UserProfileDropdown({ className = "" }: UserProfileDropd
   const userEmail = session.user?.email || ''
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: '/' })
+    await signOut({ callbackUrl: '/auth/signin' })
     setIsOpen(false)
   }
 
   const handleProfileClick = () => {
     router.push('/profile')
+    setIsOpen(false)
+  }
+
+  const handleResetPassword = () => {
+    // For now, just redirect to profile page where they can change password
+    // In the future, you might want a separate reset password flow
+    router.push('/profile?tab=password')
     setIsOpen(false)
   }
 
@@ -114,50 +121,71 @@ export default function UserProfileDropdown({ className = "" }: UserProfileDropd
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-64 z-50">
-          <CutoutShell className="w-full">
-            <div className="py-2">
-              {/* User Info Section */}
-              <div className="px-4 py-3 border-b border-gray-700">
-                <div className="flex items-center gap-3">
-                  {session.user?.image ? (
-                    <img
-                      src={session.user.image}
-                      alt="User Avatar"
-                      className="h-10 w-10 rounded-full"
-                    />
-                  ) : (
-                    <div className="h-10 w-10 rounded-full bg-[#10F3FE]/20 flex items-center justify-center">
-                      <User className="h-6 w-6 text-[#10F3FE]" />
+        <div className="absolute right-0 top-full mt-2 w-64 z-[9999] shadow-2xl">
+          <div className="relative">
+            <div className="absolute inset-0 bg-[#10F3FE] rounded-lg" style={{ clipPath: CLIP }} />
+            <div 
+              className="relative bg-[#05181E] border border-[#10F3FE]/30 rounded-lg"
+              style={{
+                clipPath: CLIP,
+                transform: 'translate(2px, 2px)',
+                width: 'calc(100% - 4px)',
+                height: 'calc(100% - 4px)',
+              }}
+            >
+              <div className="py-2">
+                {/* User Info Section */}
+                <div className="px-4 py-3 border-b border-[#10F3FE]/20">
+                  <div className="flex items-center gap-3">
+                    {session.user?.image ? (
+                      <img
+                        src={session.user.image}
+                        alt="User Avatar"
+                        className="h-10 w-10 rounded-full border-2 border-[#10F3FE]/30"
+                      />
+                    ) : (
+                      <div className="h-10 w-10 rounded-full bg-[#10F3FE]/20 border-2 border-[#10F3FE]/30 flex items-center justify-center">
+                        <User className="h-6 w-6 text-[#10F3FE]" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-medium truncate text-sm">{userName}</p>
+                      <p className="text-cyan-300/70 text-xs truncate">{userEmail}</p>
                     </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white font-medium truncate">{userName}</p>
-                    <p className="text-gray-400 text-sm truncate">{userEmail}</p>
+                  </div>
+                </div>
+
+                {/* Menu Items */}
+                <div className="py-1">
+                  <button
+                    onClick={handleProfileClick}
+                    className="flex items-center gap-3 w-full px-4 py-3 text-left text-white hover:bg-[#10F3FE]/10 transition-all duration-200 hover:text-[#10F3FE]"
+                  >
+                    <User className="h-4 w-4 text-[#10F3FE]" />
+                    <span className="font-medium">Profile</span>
+                  </button>
+
+                  <button
+                    onClick={handleResetPassword}
+                    className="flex items-center gap-3 w-full px-4 py-3 text-left text-white hover:bg-[#10F3FE]/10 transition-all duration-200 hover:text-[#10F3FE]"
+                  >
+                    <Key className="h-4 w-4 text-[#10F3FE]" />
+                    <span className="font-medium">Reset Password</span>
+                  </button>
+
+                  <div className="border-t border-[#10F3FE]/20 mt-1 pt-1">
+                    <button
+                      onClick={handleSignOut}
+                      className="flex items-center gap-3 w-full px-4 py-3 text-left text-red-300 hover:bg-red-500/10 transition-all duration-200 hover:text-red-200"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span className="font-medium">Sign Out</span>
+                    </button>
                   </div>
                 </div>
               </div>
-
-              {/* Menu Items */}
-              <div className="py-1">
-                <button
-                  onClick={handleProfileClick}
-                  className="flex items-center gap-3 w-full px-4 py-2 text-left text-white hover:bg-[#10F3FE]/10 transition-colors"
-                >
-                  <Settings className="h-4 w-4 text-[#10F3FE]" />
-                  <span>Profile Settings</span>
-                </button>
-
-                <button
-                  onClick={handleSignOut}
-                  className="flex items-center gap-3 w-full px-4 py-2 text-left text-red-300 hover:bg-red-500/10 transition-colors"
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span>Sign Out</span>
-                </button>
-              </div>
             </div>
-          </CutoutShell>
+          </div>
         </div>
       )}
     </div>

@@ -1,7 +1,9 @@
 'use client'
 import { useSession } from 'next-auth/react'
+import { useSearchParams } from 'next/navigation'
+import { useState } from 'react'
 import { AuthenticatedLayout } from '@/components/layout/AuthenticatedLayout'
-import { User, Mail, Calendar, Shield } from 'lucide-react'
+import { User, Mail, Calendar, Shield, Key, Eye, EyeOff } from 'lucide-react'
 import { redirect } from 'next/navigation'
 
 // Reusable CutoutShell component
@@ -42,6 +44,16 @@ function CutoutShell({
 
 export default function ProfilePage() {
   const { data: session, status } = useSession()
+  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'general')
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  })
 
   if (status === 'loading') {
     return (
@@ -68,6 +80,20 @@ export default function ProfilePage() {
   const userEmail = session.user?.email || ''
   const userImage = session.user?.image
 
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPasswordForm({
+      ...passwordForm,
+      [e.target.name]: e.target.value
+    })
+  }
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    // Add password change logic here
+    console.log('Password change requested', passwordForm)
+    // You would typically call an API endpoint here
+  }
+
   return (
     <AuthenticatedLayout>
       <div className="flex h-full flex-col overflow-hidden p-6 text-cyan-100">
@@ -77,9 +103,40 @@ export default function ProfilePage() {
           <p className="text-sm text-cyan-200/80">Manage your account settings and preferences</p>
         </div>
 
+        {/* Tabs */}
+        <div className="mb-6">
+          <CutoutShell className="h-fit w-fit">
+            <div className="flex">
+              <button
+                onClick={() => setActiveTab('general')}
+                className={`px-6 py-3 text-sm font-medium transition-colors ${
+                  activeTab === 'general'
+                    ? 'text-[#10F3FE] bg-[#10F3FE]/10'
+                    : 'text-cyan-200/80 hover:text-white hover:bg-[#10F3FE]/5'
+                }`}
+              >
+                <User className="inline h-4 w-4 mr-2" />
+                General
+              </button>
+              <button
+                onClick={() => setActiveTab('password')}
+                className={`px-6 py-3 text-sm font-medium transition-colors ${
+                  activeTab === 'password'
+                    ? 'text-[#10F3FE] bg-[#10F3FE]/10'
+                    : 'text-cyan-200/80 hover:text-white hover:bg-[#10F3FE]/5'
+                }`}
+              >
+                <Key className="inline h-4 w-4 mr-2" />
+                Password
+              </button>
+            </div>
+          </CutoutShell>
+        </div>
+
         {/* Profile Content */}
         <div className="flex-1 overflow-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {activeTab === 'general' && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Profile Card */}
             <div className="lg:col-span-1">
               <CutoutShell className="h-fit">
@@ -170,7 +227,130 @@ export default function ProfilePage() {
                 </div>
               </CutoutShell>
             </div>
-          </div>
+            </div>
+          )}
+
+          {activeTab === 'password' && (
+            <div className="max-w-2xl mx-auto">
+              <CutoutShell className="h-fit">
+                <div className="p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Change Password</h3>
+                  <p className="text-cyan-200/80 text-sm mb-6">
+                    Update your password to keep your account secure.
+                  </p>
+                  
+                  <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                    {/* Current Password */}
+                    <div className="space-y-2">
+                      <label htmlFor="currentPassword" className="text-sm font-medium text-cyan-200">
+                        Current Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="currentPassword"
+                          name="currentPassword"
+                          type={showCurrentPassword ? 'text' : 'password'}
+                          value={passwordForm.currentPassword}
+                          onChange={handlePasswordChange}
+                          className="w-full bg-[#10F3FE]/5 border border-[#10F3FE]/20 rounded-lg px-4 py-3 text-white placeholder-cyan-300/50 focus:outline-none focus:border-[#10F3FE] focus:ring-1 focus:ring-[#10F3FE]/50 transition-colors"
+                          placeholder="Enter current password"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-300/70 hover:text-[#10F3FE] transition-colors"
+                        >
+                          {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* New Password */}
+                    <div className="space-y-2">
+                      <label htmlFor="newPassword" className="text-sm font-medium text-cyan-200">
+                        New Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="newPassword"
+                          name="newPassword"
+                          type={showNewPassword ? 'text' : 'password'}
+                          value={passwordForm.newPassword}
+                          onChange={handlePasswordChange}
+                          className="w-full bg-[#10F3FE]/5 border border-[#10F3FE]/20 rounded-lg px-4 py-3 text-white placeholder-cyan-300/50 focus:outline-none focus:border-[#10F3FE] focus:ring-1 focus:ring-[#10F3FE]/50 transition-colors"
+                          placeholder="Enter new password"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-300/70 hover:text-[#10F3FE] transition-colors"
+                        >
+                          {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Confirm Password */}
+                    <div className="space-y-2">
+                      <label htmlFor="confirmPassword" className="text-sm font-medium text-cyan-200">
+                        Confirm New Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="confirmPassword"
+                          name="confirmPassword"
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          value={passwordForm.confirmPassword}
+                          onChange={handlePasswordChange}
+                          className="w-full bg-[#10F3FE]/5 border border-[#10F3FE]/20 rounded-lg px-4 py-3 text-white placeholder-cyan-300/50 focus:outline-none focus:border-[#10F3FE] focus:ring-1 focus:ring-[#10F3FE]/50 transition-colors"
+                          placeholder="Confirm new password"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-300/70 hover:text-[#10F3FE] transition-colors"
+                        >
+                          {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Password Requirements */}
+                    <div className="bg-[#10F3FE]/5 border border-[#10F3FE]/20 rounded-lg p-4 mt-4">
+                      <h4 className="text-sm font-medium text-cyan-200 mb-2">Password Requirements:</h4>
+                      <ul className="text-xs text-cyan-300/70 space-y-1">
+                        <li>• At least 8 characters long</li>
+                        <li>• Contains at least one uppercase letter</li>
+                        <li>• Contains at least one lowercase letter</li>
+                        <li>• Contains at least one number</li>
+                        <li>• Contains at least one special character</li>
+                      </ul>
+                    </div>
+
+                    {/* Submit Button */}
+                    <div className="flex gap-4 pt-6">
+                      <button
+                        type="submit"
+                        className="flex-1 bg-[#10F3FE] text-black px-4 py-3 rounded-lg font-medium hover:bg-[#10F3FE]/90 transition-colors"
+                      >
+                        Update Password
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })}
+                        className="flex-1 bg-gray-600/20 text-gray-300 px-4 py-3 rounded-lg font-medium hover:bg-gray-600/30 transition-colors border border-gray-600/30"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </CutoutShell>
+            </div>
+          )}
         </div>
       </div>
     </AuthenticatedLayout>
