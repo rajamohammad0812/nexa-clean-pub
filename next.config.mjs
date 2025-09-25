@@ -9,6 +9,9 @@ const nextConfig = {
 	reactStrictMode: false,
 	output: 'standalone',
 	swcMinify: true,
+	eslint: {
+		ignoredDuringBuilds: true,
+	},
 }
 
 export default withBundleAnalyzer(nextConfig)

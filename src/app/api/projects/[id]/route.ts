@@ -23,7 +23,7 @@ const UpdateProjectSchema = z.object({
     ])
     .optional(),
   status: z.enum(['DRAFT', 'ACTIVE', 'PAUSED', 'ARCHIVED']).optional(),
-  config: z.record(z.any()).optional(),
+  config: z.record(z.string(), z.unknown()).optional(),
 })
 
 interface RouteParams {
@@ -138,7 +138,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       where: {
         id: params.id,
       },
-      data: validatedData,
+      data: {
+        name: validatedData.name,
+        description: validatedData.description,
+        repository: validatedData.repository,
+        framework: validatedData.framework,
+        status: validatedData.status,
+      },
       include: {
         environments: true,
         _count: {

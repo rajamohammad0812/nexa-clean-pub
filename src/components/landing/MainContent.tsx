@@ -1,6 +1,10 @@
 "use client"
 import { useState, useRef, useEffect } from 'react'
 import generalChatIcon from '@/components/assets/img/MainContent/generalChat.svg'
+import ProjectGenerationModal from '@/components/ai/ProjectGenerationModal'
+import ProjectAnalysisCard from '@/components/ai/ProjectAnalysisCard'
+import { ProjectRequirements } from '@/lib/ai/project-generator'
+import { ProjectAnalysis, AnalysisRequest, AnalysisResponse } from '@/types/ai-analysis'
 import searchIcon from '@/components/assets/img/MainContent/search.svg'
 import micIcon from '@/components/assets/img/MainContent/mic.svg'
 import sendArrowIcon from '@/components/assets/img/MainContent/sendArrow.svg'
@@ -52,12 +56,19 @@ interface ChatMessage {
   type: 'user' | 'assistant'
   content: string
   timestamp: Date
+  projectAnalysis?: ProjectAnalysis
+  showCreateButton?: boolean
+  confidence?: number
 }
 
 export default function MainContent({ className = "" }: Props) {
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isGeneratingProject, setIsGeneratingProject] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedAnalysis, setSelectedAnalysis] = useState<ProjectRequirements | null>(null)
+  const [originalAnalysis, setOriginalAnalysis] = useState<ProjectAnalysis | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   
   const clipPath = "polygon(25px 0, 35% 0, calc(35% + 25px) 25px, calc(35% + 25px) 70px, 39% 90px, 97.5% 90px, 100% 110px, 100% calc(100% - 25px), calc(100% - 25px) 100%, 0 100%, 0 25px)"
@@ -88,6 +99,36 @@ export default function MainContent({ className = "" }: Props) {
     
     setIsLoading(true)
     try {
+      // First, analyze if this is a project request
+      const analysisRequest: AnalysisRequest = {
+        userPrompt: userMessage,
+        context: {
+          userSkillLevel: 'intermediate', // Could be customized based on user profile
+          budget: 'medium',
+          timeline: 'normal'
+        }
+      }
+      
+      const analysisResponse = await fetch('/api/analyze-project', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(analysisRequest)
+      })
+      const analysisData: AnalysisResponse = await analysisResponse.json()
+      
+      let projectAnalysis = null
+      let showCreateButton = false
+      
+      if (analysisData.success && analysisData.analysis) {
+        projectAnalysis = analysisData.analysis
+        // Show create button if we have a valid project analysis with good confidence
+        showCreateButton = analysisData.confidence > 0.7
+      }
+      // If analysis failed with "Not a project request", that's normal - just continue with regular chat
+
+      // Get regular chat response
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -102,11 +143,23 @@ export default function MainContent({ className = "" }: Props) {
       const data = await response.json()
 
       if (data.success) {
+        let aiContent = data.response
+        
+        // If it's a project request, enhance the response
+        if (showCreateButton && projectAnalysis && analysisData.confidence) {
+          const confidencePercent = Math.round(analysisData.confidence * 100)
+          const features = projectAnalysis.keyFeatures.slice(0, 3).map(f => f.name).join(', ')
+          aiContent += `\n\n**I detected you want to create a ${projectAnalysis.title}**\n\nProject Type: ${projectAnalysis.projectType}\nConfidence: ${confidencePercent}%\nKey Features: ${features}\nComplexity: ${projectAnalysis.complexity}\nEstimated Time: ${projectAnalysis.estimatedTimeWeeks} weeks\nRecommended Template: ${projectAnalysis.recommendedTemplate?.name || 'Next.js Fullstack'}\n\nI can generate a complete application for you with all the code, database setup, and deployment configuration.`
+        }
+        
         // Add AI response to chat
         const aiMessage: ChatMessage = {
           type: 'assistant',
-          content: data.response,
-          timestamp: new Date()
+          content: aiContent,
+          timestamp: new Date(),
+          projectAnalysis,
+          showCreateButton,
+          confidence: analysisData.confidence
         }
         setMessages(prev => [...prev, aiMessage])
       } else {
@@ -116,6 +169,97 @@ export default function MainContent({ className = "" }: Props) {
       console.error('Network error:', error)
     }
     setIsLoading(false)
+  }
+
+  const handleOpenCustomizationModal = (projectAnalysis: ProjectAnalysis) => {
+    // Convert to old format for modal
+    const requirements = convertAnalysisToRequirements(projectAnalysis)
+    setSelectedAnalysis(requirements)
+    setOriginalAnalysis(projectAnalysis) // Store original for enhanced generation
+    setIsModalOpen(true)
+  }
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
+    setSelectedAnalysis(null)
+    setOriginalAnalysis(null)
+  }
+
+  const handleGenerateFromModal = async (customizedAnalysis: ProjectRequirements, projectName: string, originalAnalysis?: ProjectAnalysis) => {
+    setIsGeneratingProject(true)
+    setIsModalOpen(false)
+    
+    try {
+      // Add generating message to chat
+      const generatingMessage: ChatMessage = {
+        type: 'assistant',
+        content: `**Generating "${projectName}"...** \n\nThis may take 30-60 seconds. I'm creating:\n- Complete application structure\n- Database schema (${customizedAnalysis.features.length} features)\n- API endpoints\n- Frontend components\n- Deployment configuration\n\nPlease wait...`,
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, generatingMessage])
+      
+      // Call enhanced project generation API with full analysis
+      const response = await fetch('/api/ai/generate-project-enhanced', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          projectAnalysis: originalAnalysis, // Use original ProjectAnalysis for enhanced generation
+          projectName: projectName
+        }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        // Add success message
+        const successMessage: ChatMessage = {
+          type: 'assistant',
+          content: `**Project \"${projectName}\" Generated Successfully**\n\n**Type:** ${customizedAnalysis.projectType} (${customizedAnalysis.complexity} complexity)\n**Features:** ${customizedAnalysis.features.length} features included\n\n**AI-Generated Files:**\n${data.generatedFiles ? data.generatedFiles.map(f => `- ${f.filename} (${f.type}): ${f.description}`).join('\n') : 'Custom components, API endpoints, and database schema'}\n\n**Enhancement Status:**\n- Files Written: ${data.enhancement?.filesWritten || 0}\n- Success: ${data.enhancement?.success ? 'Yes' : 'Partial'}\n\n**Project Path:** ${data.projectPath}\n\nYour enhanced project with AI-generated custom code is ready to use!`,
+          timestamp: new Date()
+        }
+        setMessages(prev => [...prev, successMessage])
+      } else {
+        // Add error message
+        const errorMessage: ChatMessage = {
+          type: 'assistant',
+          content: `**Project Generation Failed**\n\nError: ${data.error}\n\nPlease try again or contact support if the issue persists.`,
+          timestamp: new Date()
+        }
+        setMessages(prev => [...prev, errorMessage])
+      }
+    } catch (error) {
+      console.error('Project generation error:', error)
+      const errorMessage: ChatMessage = {
+        type: 'assistant',
+        content: `**Network Error**\n\nFailed to generate project due to network issues. Please check your connection and try again.`,
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, errorMessage])
+    }
+    
+    setIsGeneratingProject(false)
+  }
+
+  // Convert ProjectAnalysis to ProjectRequirements for backward compatibility
+  const convertAnalysisToRequirements = (analysis: ProjectAnalysis): ProjectRequirements => {
+    return {
+      projectType: analysis.projectType,
+      description: analysis.description,
+      features: analysis.keyFeatures.map(f => f.name),
+      complexity: analysis.complexity,
+      suggestedTemplate: analysis.recommendedTemplate?.id || 'nextjs-fullstack', // Use AI-selected template
+      confidence: 85 // Static confidence for converted analysis
+    }
+  }
+
+  const handleQuickGenerate = async (projectAnalysis: ProjectAnalysis) => {
+    // Store original analysis and convert for backward compatibility
+    setOriginalAnalysis(projectAnalysis)
+    const requirements = convertAnalysisToRequirements(projectAnalysis)
+    const defaultProjectName = `${projectAnalysis.projectType.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}`
+    await handleGenerateFromModal(requirements, defaultProjectName)
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -195,6 +339,20 @@ export default function MainContent({ className = "" }: Props) {
                         <div className="text-sm whitespace-pre-wrap">
                           {message.content}
                         </div>
+                        
+                        {/* Show Enhanced Project Analysis for project requests */}
+                        {message.showCreateButton && message.projectAnalysis && (
+                          <div className="mt-4 pt-4 border-t border-white/20">
+                            <ProjectAnalysisCard
+                              analysis={message.projectAnalysis}
+                              confidence={message.confidence}
+                              onCustomize={() => handleOpenCustomizationModal(message.projectAnalysis)}
+                              onGenerateNow={() => handleQuickGenerate(message.projectAnalysis)}
+                              isGenerating={isGeneratingProject}
+                            />
+                          </div>
+                        )}
+                        
                         <div className={`text-xs mt-1 opacity-70 ${
                           message.type === 'user' ? 'text-black/70' : 'text-white/70'
                         }`}>
@@ -207,7 +365,7 @@ export default function MainContent({ className = "" }: Props) {
                     <div className="flex justify-start">
                       <div className="bg-black/40 text-white px-3 py-2 rounded-lg backdrop-blur-sm">
                         <div className="flex items-center space-x-2">
-                          <div className="animate-spin text-[#10F3FE] text-sm">⟳</div>
+                          <div className="animate-spin w-4 h-4 border-2 border-[#10F3FE]/30 border-t-[#10F3FE] rounded-full"></div>
                           <span className="text-sm">AI is thinking...</span>
                         </div>
                       </div>
@@ -235,19 +393,21 @@ export default function MainContent({ className = "" }: Props) {
                           <img src={micIcon.src} alt="Mic" />
                         </div>
                         <CutoutShell className="-mt-[2px]">
-                          <div
+                          <button
                             className={`p-4 hover:bg-cyan-400/30 transition cursor-pointer ${
                               isLoading ? 'opacity-50 cursor-not-allowed' : ''
                             }`}
                             style={{ width: '60px', height: '60px' }}
                             onClick={handleSendMessage}
+                            disabled={isLoading}
+                            aria-label="Send message"
                           >
                             {isLoading ? (
-                              <div className='ml-1 mt-1 animate-spin text-[#10F3FE]'>⟳</div>
+                              <div className='ml-1 mt-1 animate-spin w-4 h-4 border-2 border-[#10F3FE]/30 border-t-[#10F3FE] rounded-full'></div>
                             ) : (
                               <img src={sendArrowIcon.src} alt="Send" className='ml-1 mt-1' />
                             )}
-                          </div>
+                          </button>
                         </CutoutShell>
                       </div>
                     </div>
@@ -296,7 +456,7 @@ export default function MainContent({ className = "" }: Props) {
 
                   {/* Send */}
                   <CutoutShell className="-mt-[2px]">
-                    <div
+                    <button
                       className={`p-4 hover:bg-cyan-400/30 transition cursor-pointer ${
                         isLoading ? 'opacity-50 cursor-not-allowed' : ''
                       }`}
@@ -305,13 +465,15 @@ export default function MainContent({ className = "" }: Props) {
                         height: '65px',
                       }}
                       onClick={handleSendMessage}
+                      disabled={isLoading}
+                      aria-label="Send message"
                     >
                       {isLoading ? (
                         <div className='ml-1 mt-1 animate-spin text-[#10F3FE] text-lg'>⟳</div>
                       ) : (
                         <img src={sendArrowIcon.src} alt="Send" className='ml-1 mt-1' />
                       )}
-                    </div>
+                    </button>
                   </CutoutShell>
                 </div>
               </div>
@@ -351,6 +513,17 @@ export default function MainContent({ className = "" }: Props) {
         alt="Border Decoration"
         className="absolute right-0 bottom-40 translate-x-1/2 z-50 pointer-events-none select-none -rotate-90"
       />
+      
+      {/* Project Generation Modal */}
+      {selectedAnalysis && (
+        <ProjectGenerationModal
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          analysis={selectedAnalysis}
+          onGenerate={handleGenerateFromModal}
+          isGenerating={isGeneratingProject}
+        />
+      )}
     </section>
   )
 }
