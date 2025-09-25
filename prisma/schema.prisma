@@ -186,11 +186,48 @@ model WorkflowExecution {
   logs       String?   // Execution logs
   error      String?   // Error message if failed
   
+  // Step execution tracking
+  stepResults Json?    // Individual step results
+  currentStep String?  // Currently executing step ID
+  
+  // Trigger information
+  triggeredBy String?  // How the execution was triggered
+  triggerData Json?    // Trigger payload data
+  
   createdAt  DateTime @default(now())
   
   workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  stepExecutions StepExecution[]
   
   @@map("workflow_executions")
+}
+
+model StepExecution {
+  id                String          @id @default(cuid())
+  executionId       String
+  stepId            String
+  status            ExecutionStatus @default(PENDING)
+  
+  // Step execution details
+  startedAt         DateTime?
+  finishedAt        DateTime?
+  duration          Int?            // Duration in seconds
+  
+  // Results
+  input             Json?           // Step input data
+  output            Json?           // Step output data
+  error             String?         // Error message if failed
+  logs              String?         // Step-specific logs
+  
+  // Retry tracking
+  attemptNumber     Int             @default(1)
+  maxAttempts       Int             @default(3)
+  
+  createdAt         DateTime        @default(now())
+  
+  execution         WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  
+  @@map("step_executions")
 }
 
 // ===============================
@@ -315,6 +352,12 @@ enum StepType {
   CONDITIONAL
   PARALLEL
   CUSTOM
+  API_CALL
+  DATABASE
+  EMAIL
+  WEBHOOK
+  DELAY
+  TRANSFORM
 }
 
 enum ExecutionStatus {
