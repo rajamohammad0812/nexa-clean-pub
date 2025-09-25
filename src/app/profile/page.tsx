@@ -54,6 +54,9 @@ export default function ProfilePage() {
     newPassword: '',
     confirmPassword: ''
   })
+  const [passwordError, setPasswordError] = useState('')
+  const [passwordSuccess, setPasswordSuccess] = useState('')
+  const [isPasswordLoading, setIsPasswordLoading] = useState(false)
 
   if (status === 'loading') {
     return (
@@ -87,11 +90,53 @@ export default function ProfilePage() {
     })
   }
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Add password change logic here
-    console.log('Password change requested', passwordForm)
-    // You would typically call an API endpoint here
+    setPasswordError('')
+    setPasswordSuccess('')
+    setIsPasswordLoading(true)
+
+    try {
+      // Validate passwords match on client side
+      if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+        setPasswordError('New passwords do not match')
+        return
+      }
+
+      // Validate password length
+      if (passwordForm.newPassword.length < 8) {
+        setPasswordError('Password must be at least 8 characters long')
+        return
+      }
+
+      // Call the password change API
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(passwordForm),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setPasswordSuccess(data.message || 'Password updated successfully!')
+        // Clear the form
+        setPasswordForm({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        })
+      } else {
+        setPasswordError(data.error || 'Failed to update password')
+      }
+    } catch (error) {
+      console.error('Password change error:', error)
+      setPasswordError('An error occurred while updating password')
+    } finally {
+      setIsPasswordLoading(false)
+    }
   }
 
   return (
@@ -330,18 +375,45 @@ export default function ProfilePage() {
                       </ul>
                     </div>
 
+                    {/* Success Message */}
+                    {passwordSuccess && (
+                      <div className="rounded-lg bg-green-500/10 border border-green-500/30 p-3 text-center text-sm text-green-300">
+                        {passwordSuccess}
+                      </div>
+                    )}
+
+                    {/* Error Message */}
+                    {passwordError && (
+                      <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3 text-center text-sm text-red-300">
+                        {passwordError}
+                      </div>
+                    )}
+
                     {/* Submit Button */}
                     <div className="flex gap-4 pt-6">
                       <button
                         type="submit"
-                        className="flex-1 bg-[#10F3FE] text-black px-4 py-3 rounded-lg font-medium hover:bg-[#10F3FE]/90 transition-colors"
+                        disabled={isPasswordLoading}
+                        className="flex-1 bg-[#10F3FE] text-black px-4 py-3 rounded-lg font-medium hover:bg-[#10F3FE]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                       >
-                        Update Password
+                        {isPasswordLoading ? (
+                          <>
+                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-black border-t-transparent"></div>
+                            Updating...
+                          </>
+                        ) : (
+                          'Update Password'
+                        )}
                       </button>
                       <button
                         type="button"
-                        onClick={() => setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })}
-                        className="flex-1 bg-gray-600/20 text-gray-300 px-4 py-3 rounded-lg font-medium hover:bg-gray-600/30 transition-colors border border-gray-600/30"
+                        disabled={isPasswordLoading}
+                        onClick={() => {
+                          setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
+                          setPasswordError('')
+                          setPasswordSuccess('')
+                        }}
+                        className="flex-1 bg-gray-600/20 text-gray-300 px-4 py-3 rounded-lg font-medium hover:bg-gray-600/30 transition-colors border border-gray-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Cancel
                       </button>
