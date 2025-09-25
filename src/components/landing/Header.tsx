@@ -2,6 +2,7 @@
 import appLogo from '@/components/assets/img/appLogo.svg'
 import menuIcon from '@/components/assets/img/Header/menu.svg'
 import shareIcon from '@/components/assets/img/Header/share.svg'
+import UserProfileDropdown from '@/components/ui/UserProfileDropdown'
 // import { CutoutShell } from '../ui/cutOut'
 type Props = {
   className?: string
@@ -50,6 +51,7 @@ export default function Header({ className = "" }: Props) {
             <span className="text-white text-base">Share</span>
           </div>
         </CutoutShell>
+        <UserProfileDropdown />
         <CutoutShell className="h-[45px] w-[50px]">
           <div>
             <img src={menuIcon.src} alt="Menu" className='pt-2 pl-1' />
