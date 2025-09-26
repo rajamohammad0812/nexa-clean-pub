@@ -1,0 +1,63 @@
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: nexabuilder-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nexa_builder_db
+      POSTGRES_USER: nexabuilder
+      POSTGRES_PASSWORD: nexabuilder123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - nexabuilder-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexabuilder -d nexa_builder_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Next.js Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.simple
+    container_name: nexabuilder-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.local
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://nexabuilder:nexabuilder123@db:5432/nexa_builder_db
+      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_SECRET=your-nextauth-secret-key-change-this-in-production
+      - NEXT_PUBLIC_APP_NAME=Nexa Builder
+      - NEXT_PUBLIC_BASE_URL=http://localhost:3000
+      # GitHub token for analytics (optional)
+      # - GITHUB_TOKEN=your-github-token
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - nexabuilder-network
+    # Wait for database to be ready and run migrations
+    command: >
+      sh -c "
+        echo 'Waiting for database to be ready...' &&
+        npx prisma migrate deploy &&
+        echo 'Database migrations completed.' &&
+        npm run dev
+      "
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  nexabuilder-network:
+    driver: bridge

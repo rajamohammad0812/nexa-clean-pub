@@ -1,0 +1,165 @@
+/* ROC Grotesk Font Family - Custom Fonts */
+
+/* ROC Grotesk Regular Variants */
+@font-face {
+  font-family: 'ROC Grotesk';
+  src: url('/fonts/Fontspring-DEMO-rocgrotesk-thin.otf') format('opentype');
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ROC Grotesk';
+  src: url('/fonts/Fontspring-DEMO-rocgrotesk-extralight.otf') format('opentype');
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ROC Grotesk';
+  src: url('/fonts/Fontspring-DEMO-rocgrotesk-light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ROC Grotesk';
+  src: url('/fonts/Fontspring-DEMO-rocgrotesk-regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ROC Grotesk';
+  src: url('/fonts/Fontspring-DEMO-rocgrotesk-medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ROC Grotesk';
+  src: url('/fonts/Fontspring-DEMO-rocgrotesk-bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ROC Grotesk';
+  src: url('/fonts/Fontspring-DEMO-rocgrotesk-extrabold.otf') format('opentype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ROC Grotesk';
+  src: url('/fonts/Fontspring-DEMO-rocgrotesk-black.otf') format('opentype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ROC Grotesk Condensed - For UI Elements */
+@font-face {
+  font-family: 'ROC Grotesk Condensed';
+  src: url('/fonts/Fontspring-DEMO-rocgroteskcond-light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ROC Grotesk Condensed';
+  src: url('/fonts/Fontspring-DEMO-rocgroteskcond-regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ROC Grotesk Condensed';
+  src: url('/fonts/Fontspring-DEMO-rocgroteskcond-medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ROC Grotesk Condensed';
+  src: url('/fonts/Fontspring-DEMO-rocgroteskcond-bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ROC Grotesk Wide - For Headings and Branding */
+@font-face {
+  font-family: 'ROC Grotesk Wide';
+  src: url('/fonts/Fontspring-DEMO-rocgroteskwide-light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ROC Grotesk Wide';
+  src: url('/fonts/Fontspring-DEMO-rocgroteskwide-regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ROC Grotesk Wide';
+  src: url('/fonts/Fontspring-DEMO-rocgroteskwide-medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ROC Grotesk Wide';
+  src: url('/fonts/Fontspring-DEMO-rocgroteskwide-bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ROC Grotesk Wide';
+  src: url('/fonts/Fontspring-DEMO-rocgroteskwide-extrabold.otf') format('opentype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ROC Grotesk Compressed - For Dense UI Areas */
+@font-face {
+  font-family: 'ROC Grotesk Compressed';
+  src: url('/fonts/Fontspring-DEMO-rocgroteskcomp-regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ROC Grotesk Compressed';
+  src: url('/fonts/Fontspring-DEMO-rocgroteskcomp-medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ROC Grotesk Compressed';
+  src: url('/fonts/Fontspring-DEMO-rocgroteskcomp-bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}

@@ -1,0 +1,380 @@
+// NexaBuilder Automation Platform Schema
+// Comprehensive database design for 99% automated deployments
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===============================
+// USER MANAGEMENT
+// ===============================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  image     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // User preferences and settings
+  preferences UserPreferences?
+  apiKeys     ApiKey[]
+  
+  // Relationships
+  projects      Project[]
+  workflows     Workflow[]
+  deployments   Deployment[]
+  
+  @@map("users")
+}
+
+model UserPreferences {
+  id               String  @id @default(cuid())
+  userId           String  @unique
+  theme            String  @default("dark")
+  defaultCloudProvider String?
+  notifications    Boolean @default(true)
+  emailAlerts      Boolean @default(true)
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("user_preferences")
+}
+
+model ApiKey {
+  id          String   @id @default(cuid())
+  name        String
+  key         String   @unique
+  userId      String
+  provider    CloudProvider
+  isActive    Boolean  @default(true)
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("api_keys")
+}
+
+// ===============================
+// PROJECT MANAGEMENT
+// ===============================
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  repository  String?
+  framework   Framework
+  status      ProjectStatus @default(DRAFT)
+  
+  // Metadata
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  userId      String
+  
+  // Configuration
+  config      Json?     // Store project-specific configuration
+  
+  // Relationships
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workflows   Workflow[]
+  deployments Deployment[]
+  environments Environment[]
+  
+  @@map("projects")
+}
+
+model Environment {
+  id        String      @id @default(cuid())
+  name      String      // dev, staging, production
+  type      EnvType
+  projectId String
+  
+  // Environment configuration
+  variables Json?       // Environment variables
+  secrets   Json?       // Encrypted secrets
+  
+  // Cloud configuration
+  cloudProvider  CloudProvider
+  region         String?
+  configuration  Json?    // Provider-specific config
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  deployments Deployment[]
+  
+  @@unique([projectId, name])
+  @@map("environments")
+}
+
+// ===============================
+// WORKFLOW SYSTEM
+// ===============================
+
+model Workflow {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  projectId   String
+  userId      String
+  
+  // Workflow definition
+  steps       WorkflowStep[]
+  triggers    Json?    // Trigger configuration
+  schedule    String?  // Cron schedule if applicable
+  
+  // Status and metadata
+  status      WorkflowStatus @default(DRAFT)
+  isActive    Boolean        @default(false)
+  version     Int            @default(1)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relationships
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  executions  WorkflowExecution[]
+  
+  @@map("workflows")
+}
+
+model WorkflowStep {
+  id         String   @id @default(cuid())
+  workflowId String
+  name       String
+  type       StepType
+  order      Int
+  
+  // Step configuration
+  config     Json?    // Step-specific configuration
+  conditions Json?    // Conditional execution rules
+  
+  // Timing and retry
+  timeout    Int?     // Timeout in seconds
+  retries    Int      @default(3)
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  @@map("workflow_steps")
+}
+
+model WorkflowExecution {
+  id         String     @id @default(cuid())
+  workflowId String
+  status     ExecutionStatus @default(PENDING)
+  
+  // Execution details
+  startedAt  DateTime?
+  finishedAt DateTime?
+  duration   Int?      // Duration in seconds
+  
+  // Results and logs
+  result     Json?     // Execution result
+  logs       String?   // Execution logs
+  error      String?   // Error message if failed
+  
+  // Step execution tracking
+  stepResults Json?    // Individual step results
+  currentStep String?  // Currently executing step ID
+  
+  // Trigger information
+  triggeredBy String?  // How the execution was triggered
+  triggerData Json?    // Trigger payload data
+  
+  createdAt  DateTime @default(now())
+  
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  stepExecutions StepExecution[]
+  
+  @@map("workflow_executions")
+}
+
+model StepExecution {
+  id                String          @id @default(cuid())
+  executionId       String
+  stepId            String
+  status            ExecutionStatus @default(PENDING)
+  
+  // Step execution details
+  startedAt         DateTime?
+  finishedAt        DateTime?
+  duration          Int?            // Duration in seconds
+  
+  // Results
+  input             Json?           // Step input data
+  output            Json?           // Step output data
+  error             String?         // Error message if failed
+  logs              String?         // Step-specific logs
+  
+  // Retry tracking
+  attemptNumber     Int             @default(1)
+  maxAttempts       Int             @default(3)
+  
+  createdAt         DateTime        @default(now())
+  
+  execution         WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  
+  @@map("step_executions")
+}
+
+// ===============================
+// DEPLOYMENT SYSTEM
+// ===============================
+
+model Deployment {
+  id            String   @id @default(cuid())
+  projectId     String
+  environmentId String
+  userId        String
+  
+  // Deployment details
+  version       String
+  branch        String?
+  commitSha     String?
+  
+  // Status and timing
+  status        DeploymentStatus @default(PENDING)
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  duration      Int?            // Duration in seconds
+  
+  // Configuration
+  config        Json?           // Deployment configuration
+  
+  // Results
+  url           String?         // Deployed application URL
+  logs          String?         // Deployment logs
+  error         String?         // Error message if failed
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relationships
+  project       Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  environment   Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("deployments")
+}
+
+// ===============================
+// TEMPLATES SYSTEM
+// ===============================
+
+model Template {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  category    String
+  framework   Framework
+  
+  // Template definition
+  config      Json     // Template configuration
+  workflows   Json?    // Pre-defined workflows
+  
+  // Metadata
+  isPublic    Boolean  @default(false)
+  downloads   Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("templates")
+}
+
+// ===============================
+// ENUMS
+// ===============================
+
+enum ProjectStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum EnvType {
+  DEVELOPMENT
+  STAGING
+  PRODUCTION
+  PREVIEW
+}
+
+enum CloudProvider {
+  AWS
+  AZURE
+  GCP
+  DIGITAL_OCEAN
+  VERCEL
+  NETLIFY
+  RAILWAY
+  RENDER
+}
+
+enum Framework {
+  NEXTJS
+  REACT
+  VUE
+  ANGULAR
+  SVELTE
+  NODEJS
+  PYTHON
+  GOLANG
+  RUST
+  DOCKER
+}
+
+enum WorkflowStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum StepType {
+  BUILD
+  TEST
+  DEPLOY
+  NOTIFY
+  CONDITIONAL
+  PARALLEL
+  CUSTOM
+  API_CALL
+  DATABASE
+  EMAIL
+  WEBHOOK
+  DELAY
+  TRANSFORM
+}
+
+enum ExecutionStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+  CANCELLED
+  TIMEOUT
+}
+
+enum DeploymentStatus {
+  PENDING
+  BUILDING
+  DEPLOYING
+  SUCCESS
+  FAILED
+  CANCELLED
+  ROLLBACK
+}

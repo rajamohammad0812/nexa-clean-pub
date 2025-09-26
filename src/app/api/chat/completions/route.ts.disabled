@@ -1,0 +1,192 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { requireAuth } from '@/lib/auth'
+import { prisma } from '@/lib/db'
+import { AIService } from '@/lib/ai'
+
+const chatCompletionSchema = z.object({
+  sessionId: z.string().uuid('Invalid session ID').optional(),
+  message: z.string().min(1, 'Message is required'),
+  projectId: z.string().uuid('Invalid project ID').optional(),
+  context: z.record(z.any()).optional(),
+  model: z.string().optional(),
+  temperature: z.number().min(0).max(2).optional(),
+  max_tokens: z.number().min(1).max(4000).optional(),
+})
+
+export async function POST(request: NextRequest) {
+  try {
+    const { user, error } = await requireAuth(request)
+    
+    if (error || !user) {
+      return NextResponse.json(
+        { error: error || 'Authentication required' },
+        { status: 401 }
+      )
+    }
+
+    const body = await request.json()
+    const validatedData = chatCompletionSchema.parse(body)
+
+    // Check subscription limits for AI usage
+    const subscription = await prisma.subscription.findUnique({
+      where: { userId: user.id }
+    })
+
+    if (!subscription || subscription.status !== 'ACTIVE') {
+      return NextResponse.json(
+        { error: 'Active subscription required for AI features' },
+        { status: 403 }
+      )
+    }
+
+    // Get or create chat session
+    let chatSession
+    if (validatedData.sessionId) {
+      chatSession = await prisma.chatSession.findFirst({
+        where: {
+          id: validatedData.sessionId,
+          userId: user.id,
+        }
+      })
+
+      if (!chatSession) {
+        return NextResponse.json(
+          { error: 'Chat session not found' },
+          { status: 404 }
+        )
+      }
+    } else {
+      // Create new session
+      chatSession = await prisma.chatSession.create({
+        data: {
+          userId: user.id,
+          projectId: validatedData.projectId,
+          title: validatedData.message.length > 50 
+            ? validatedData.message.substring(0, 50) + '...' 
+            : validatedData.message,
+          context: validatedData.context || {},
+        }
+      })
+    }
+
+    // Save user message
+    await prisma.chatMessage.create({
+      data: {
+        sessionId: chatSession.id,
+        role: 'USER',
+        content: validatedData.message,
+        metadata: {
+          timestamp: new Date(),
+          userAgent: request.headers.get('user-agent'),
+        }
+      }
+    })
+
+    // Get recent conversation history
+    const recentMessages = await prisma.chatMessage.findMany({
+      where: { sessionId: chatSession.id },
+      orderBy: { createdAt: 'asc' },
+      take: 20, // Last 20 messages for context
+    })
+
+    // Add system prompt based on context
+    const systemPrompt = {
+      role: 'system' as const,
+      content: `You are an AI assistant specialized in automation and workflow creation. You help users build, optimize, and troubleshoot automation workflows.
+
+Available capabilities:
+- Create and design automation workflows
+- Generate code for workflow steps
+- Analyze and optimize existing workflows
+- Troubleshoot workflow errors
+- Explain complex automation concepts
+
+Context:
+- User: ${user.firstName} ${user.lastName} (${user.email})
+- Subscription: ${subscription.planType}
+- Current Project: ${validatedData.projectId ? 'Yes' : 'None'}
+
+Be helpful, concise, and provide actionable suggestions. When creating workflows, always include practical steps and considerations.`
+    }
+
+    // Format messages for AI
+    const aiMessages = [
+      systemPrompt,
+      ...AIService.formatMessagesForAI(recentMessages as any)
+    ]
+
+    // Create AI completion
+    const aiResponse = await AIService.createChatCompletion({
+      messages: aiMessages,
+      model: validatedData.model,
+      temperature: validatedData.temperature,
+      max_tokens: validatedData.max_tokens,
+    })
+
+    const assistantMessage = aiResponse.choices[0].message.content
+
+    // Save AI response
+    const savedMessage = await prisma.chatMessage.create({
+      data: {
+        sessionId: chatSession.id,
+        role: 'ASSISTANT',
+        content: assistantMessage,
+        tokens: aiResponse.usage.total_tokens,
+        model: aiResponse.model,
+        metadata: {
+          timestamp: new Date(),
+          usage: aiResponse.usage,
+          finish_reason: aiResponse.choices[0].finish_reason,
+        }
+      }
+    })
+
+    // Update session title if it's a new session
+    if (!validatedData.sessionId) {
+      const titleWords = validatedData.message.split(' ').slice(0, 8).join(' ')
+      await prisma.chatSession.update({
+        where: { id: chatSession.id },
+        data: { 
+          title: titleWords.length > 50 ? titleWords.substring(0, 50) + '...' : titleWords,
+          updatedAt: new Date(),
+        }
+      })
+    }
+
+    return NextResponse.json(
+      {
+        message: 'Chat completion generated successfully',
+        data: {
+          sessionId: chatSession.id,
+          response: assistantMessage,
+          messageId: savedMessage.id,
+          usage: aiResponse.usage,
+          model: aiResponse.model,
+        },
+      },
+      { status: 200 }
+    )
+
+  } catch (error) {
+    console.error('Chat completion error:', error)
+    
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        {
+          error: 'Validation failed',
+          details: error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+        },
+        { status: 400 }
+      )
+    }
+    
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
