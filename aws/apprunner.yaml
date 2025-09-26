@@ -1,0 +1,21 @@
+version: 1.0
+runtime: docker
+build:
+  commands:
+    build:
+      # Use the AWS-optimized Dockerfile
+      - docker build -f Dockerfile.aws -t nexabuilder-app .
+run:
+  runtime-version: latest
+  command: node server.js
+  network:
+    port: 3000
+    env:
+      - NODE_ENV=production
+      - NEXT_TELEMETRY_DISABLED=1
+      - NEXT_PUBLIC_APP_NAME=Nexa Builder
+      # Note: Sensitive environment variables should be set in App Runner console
+      # DATABASE_URL, NEXTAUTH_SECRET, OPENAI_API_KEY, etc.
+  pre-run:
+    # Run database migrations
+    - npx prisma migrate deploy

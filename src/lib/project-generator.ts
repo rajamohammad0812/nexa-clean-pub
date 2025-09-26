@@ -21,41 +21,46 @@ export const PROJECT_TEMPLATES: Record<string, ProjectTemplate> = {
   'nextjs-fullstack': {
     name: 'Next.js Fullstack',
     framework: 'NEXTJS',
-    description: 'Complete Next.js application with TypeScript, Tailwind CSS, and database integration',
+    description:
+      'Complete Next.js application with TypeScript, Tailwind CSS, and database integration',
     files: [
       // Package.json
       {
         path: 'package.json',
         type: 'file',
-        content: JSON.stringify({
-          "name": "{{PROJECT_NAME}}",
-          "version": "0.1.0",
-          "private": true,
-          "scripts": {
-            "dev": "next dev",
-            "build": "next build",
-            "start": "next start",
-            "lint": "next lint"
+        content: JSON.stringify(
+          {
+            name: '{{PROJECT_NAME}}',
+            version: '0.1.0',
+            private: true,
+            scripts: {
+              dev: 'next dev',
+              build: 'next build',
+              start: 'next start',
+              lint: 'next lint',
+            },
+            dependencies: {
+              next: '14.2.7',
+              react: '^18',
+              'react-dom': '^18',
+              '@types/node': '^20',
+              '@types/react': '^18',
+              '@types/react-dom': '^18',
+              typescript: '^5',
+              tailwindcss: '^3.4.0',
+              autoprefixer: '^10.0.1',
+              postcss: '^8',
+            },
+            devDependencies: {
+              eslint: '^8',
+              'eslint-config-next': '14.2.7',
+            },
           },
-          "dependencies": {
-            "next": "14.2.7",
-            "react": "^18",
-            "react-dom": "^18",
-            "@types/node": "^20",
-            "@types/react": "^18",
-            "@types/react-dom": "^18",
-            "typescript": "^5",
-            "tailwindcss": "^3.4.0",
-            "autoprefixer": "^10.0.1",
-            "postcss": "^8"
-          },
-          "devDependencies": {
-            "eslint": "^8",
-            "eslint-config-next": "14.2.7"
-          }
-        }, null, 2)
+          null,
+          2,
+        ),
       },
-      
+
       // Next.js config
       {
         path: 'next.config.js',
@@ -67,41 +72,45 @@ const nextConfig = {
   },
 }
 
-module.exports = nextConfig`
+module.exports = nextConfig`,
       },
 
       // TypeScript config
       {
         path: 'tsconfig.json',
         type: 'file',
-        content: JSON.stringify({
-          "compilerOptions": {
-            "target": "es5",
-            "lib": ["dom", "dom.iterable", "es6"],
-            "allowJs": true,
-            "skipLibCheck": true,
-            "strict": true,
-            "noEmit": true,
-            "esModuleInterop": true,
-            "module": "esnext",
-            "moduleResolution": "bundler",
-            "resolveJsonModule": true,
-            "isolatedModules": true,
-            "jsx": "preserve",
-            "incremental": true,
-            "plugins": [
-              {
-                "name": "next"
-              }
-            ],
-            "baseUrl": ".",
-            "paths": {
-              "@/*": ["./src/*"]
-            }
+        content: JSON.stringify(
+          {
+            compilerOptions: {
+              target: 'es5',
+              lib: ['dom', 'dom.iterable', 'es6'],
+              allowJs: true,
+              skipLibCheck: true,
+              strict: true,
+              noEmit: true,
+              esModuleInterop: true,
+              module: 'esnext',
+              moduleResolution: 'bundler',
+              resolveJsonModule: true,
+              isolatedModules: true,
+              jsx: 'preserve',
+              incremental: true,
+              plugins: [
+                {
+                  name: 'next',
+                },
+              ],
+              baseUrl: '.',
+              paths: {
+                '@/*': ['./src/*'],
+              },
+            },
+            include: ['next-env.d.ts', '**/*.ts', '**/*.tsx', '.next/types/**/*.ts'],
+            exclude: ['node_modules'],
           },
-          "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-          "exclude": ["node_modules"]
-        }, null, 2)
+          null,
+          2,
+        ),
       },
 
       // Tailwind config
@@ -124,7 +133,7 @@ module.exports = {
     },
   },
   plugins: [],
-}`
+}`,
       },
 
       // PostCSS config
@@ -136,29 +145,29 @@ module.exports = {
     tailwindcss: {},
     autoprefixer: {},
   },
-}`
+}`,
       },
 
       // App directory structure
       {
         path: 'src',
         type: 'directory',
-        content: ''
+        content: '',
       },
       {
         path: 'src/app',
         type: 'directory',
-        content: ''
+        content: '',
       },
       {
         path: 'src/components',
         type: 'directory',
-        content: ''
+        content: '',
       },
       {
         path: 'src/lib',
         type: 'directory',
-        content: ''
+        content: '',
       },
 
       // Main layout
@@ -186,7 +195,7 @@ export default function RootLayout({
       <body className={inter.className}>{children}</body>
     </html>
   )
-}`
+}`,
       },
 
       // Main page
@@ -253,7 +262,7 @@ export default function RootLayout({
       </div>
     </main>
   )
-}`
+}`,
       },
 
       // Global CSS
@@ -286,7 +295,7 @@ body {
       rgb(var(--background-end-rgb))
     )
     rgb(var(--background-start-rgb));
-}`
+}`,
       },
 
       // README
@@ -362,7 +371,7 @@ To learn more about Next.js, take a look at the following resources:
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
-`
+`,
       },
 
       // Environment example
@@ -376,7 +385,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 # Add your environment variables here
 # DATABASE_URL=
 # API_KEY=
-`
+`,
       },
 
       // .gitignore
@@ -419,17 +428,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-`
-      }
-    ]
+`,
+      },
+    ],
   },
 
   'streaming-app': {
     name: 'Streaming Application',
     framework: 'NEXTJS',
-    description: 'Netflix-like streaming application with user authentication and content management',
+    description:
+      'Netflix-like streaming application with user authentication and content management',
     files: [
-      
       // Additional streaming-specific components
       {
         path: 'src/components/VideoPlayer.tsx',
@@ -475,9 +484,9 @@ export default function VideoPlayer({ src, title, poster }: VideoPlayerProps) {
       </div>
     </div>
   )
-}`
+}`,
       },
-      
+
       {
         path: 'src/components/ContentGrid.tsx',
         type: 'file',
@@ -531,10 +540,10 @@ export default function ContentGrid({ title, content }: ContentGridProps) {
       </div>
     </section>
   )
-}`
-      }
-    ]
-  }
+}`,
+      },
+    ],
+  },
 }
 
 // Get template with inheritance
@@ -543,19 +552,16 @@ function getTemplate(templateName: string): ProjectTemplate {
   if (!template) {
     return PROJECT_TEMPLATES['nextjs-fullstack']
   }
-  
+
   // Handle template inheritance
   if (templateName === 'streaming-app') {
     const baseTemplate = PROJECT_TEMPLATES['nextjs-fullstack']
     return {
       ...template,
-      files: [
-        ...baseTemplate.files,
-        ...template.files
-      ]
+      files: [...baseTemplate.files, ...template.files],
     }
   }
-  
+
   return template
 }
 
@@ -567,12 +573,12 @@ export async function generateProjectFiles(
   template: string,
   analysis?: ProjectAnalysis,
   features: string[] = [],
-  customPath?: string
+  customPath?: string,
 ): Promise<string> {
   // Use configurable project path
   const projectDir = getProjectPath(projectId, customPath)
   const baseDir = path.dirname(projectDir)
-  
+
   // Validate the path
   const validation = validateProjectPath(baseDir)
   if (!validation.isValid) {
@@ -581,20 +587,21 @@ export async function generateProjectFiles(
 
   // Ensure base directory exists
   await fs.mkdir(baseDir, { recursive: true })
-  
+
   // Create project directory
   await fs.mkdir(projectDir, { recursive: true })
 
   // Get template
   const templateConfig = getTemplate(template)
-  
+
   // Template variables for replacement
   const variables = {
     '{{PROJECT_NAME}}': projectName,
     '{{PROJECT_DESCRIPTION}}': description,
-    '{{FEATURES_LIST}}': features.length > 0 ? features.join(', ') : 'Modern web application features',
+    '{{FEATURES_LIST}}':
+      features.length > 0 ? features.join(', ') : 'Modern web application features',
     '{{PROJECT_TYPE}}': analysis?.projectType || 'web application',
-    '{{FRAMEWORK}}': templateConfig.framework
+    '{{FRAMEWORK}}': templateConfig.framework,
   }
 
   // Generate all files
@@ -623,9 +630,12 @@ export async function generateProjectFiles(
 }
 
 // Get project file tree for display
-export async function getProjectFileTree(projectId: string, customPath?: string): Promise<Record<string, any> | null> {
+export async function getProjectFileTree(
+  projectId: string,
+  customPath?: string,
+): Promise<Record<string, unknown> | null> {
   const projectDir = getProjectPath(projectId, customPath)
-  
+
   try {
     const tree = await buildFileTree(projectDir, projectDir)
     return tree
@@ -635,9 +645,9 @@ export async function getProjectFileTree(projectId: string, customPath?: string)
   }
 }
 
-async function buildFileTree(dirPath: string, basePath: string): Promise<Record<string, any>> {
+async function buildFileTree(dirPath: string, basePath: string): Promise<Record<string, unknown>> {
   const items = await fs.readdir(dirPath, { withFileTypes: true })
-  const tree: Record<string, any> = {}
+  const tree: Record<string, unknown> = {}
 
   for (const item of items) {
     const itemPath = path.join(dirPath, item.name)
@@ -646,12 +656,12 @@ async function buildFileTree(dirPath: string, basePath: string): Promise<Record<
     if (item.isDirectory()) {
       tree[item.name] = {
         type: 'directory',
-        children: await buildFileTree(itemPath, basePath)
+        children: await buildFileTree(itemPath, basePath),
       }
     } else {
       tree[item.name] = {
         type: 'file',
-        path: relativePath
+        path: relativePath,
       }
     }
   }
@@ -660,7 +670,11 @@ async function buildFileTree(dirPath: string, basePath: string): Promise<Record<
 }
 
 // Read a specific project file
-export async function getProjectFile(projectId: string, filePath: string, customPath?: string): Promise<string | null> {
+export async function getProjectFile(
+  projectId: string,
+  filePath: string,
+  customPath?: string,
+): Promise<string | null> {
   const projectDir = getProjectPath(projectId, customPath)
   const fullPath = path.join(projectDir, filePath)
 
