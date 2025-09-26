@@ -1,5 +1,6 @@
 "use client"
 import { useState, useRef, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import generalChatIcon from '@/components/assets/img/MainContent/generalChat.svg'
 import ProjectGenerationModal from '@/components/ai/ProjectGenerationModal'
 import ProjectAnalysisCard from '@/components/ai/ProjectAnalysisCard'
@@ -62,6 +63,7 @@ interface ChatMessage {
 }
 
 export default function MainContent({ className = "" }: Props) {
+  const { data: session, status } = useSession()
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isGeneratingProject, setIsGeneratingProject] = useState(false)
@@ -69,7 +71,53 @@ export default function MainContent({ className = "" }: Props) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedAnalysis, setSelectedAnalysis] = useState<ProjectRequirements | null>(null)
   const [originalAnalysis, setOriginalAnalysis] = useState<ProjectAnalysis | null>(null)
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  
+  // Session-aware chat management
+  useEffect(() => {
+    if (status === 'loading') return // Wait for session to load
+    
+    const sessionId = session?.user?.id || session?.user?.email || 'anonymous'
+    
+    // If session changed, reset chat for new session
+    if (currentSessionId !== sessionId) {
+      console.log('Session changed from', currentSessionId, 'to', sessionId, '- resetting chat')
+      setMessages([]) // Clear messages for fresh session
+      setCurrentSessionId(sessionId)
+      
+      // Clear any old localStorage data
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('nexa-chat-messages')
+      }
+      return
+    }
+    
+    // Load messages for current session
+    if (typeof window !== 'undefined' && sessionId) {
+      const storageKey = `nexa-chat-messages-${sessionId}`
+      const savedMessages = localStorage.getItem(storageKey)
+      if (savedMessages) {
+        try {
+          const parsed = JSON.parse(savedMessages)
+          setMessages(parsed.map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp)
+          })))
+        } catch (error) {
+          console.error('Failed to load saved messages:', error)
+        }
+      }
+    }
+  }, [session, status, currentSessionId])
+  
+  // Save messages to localStorage whenever they change (session-specific)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && messages.length > 0 && currentSessionId) {
+      const storageKey = `nexa-chat-messages-${currentSessionId}`
+      localStorage.setItem(storageKey, JSON.stringify(messages))
+    }
+  }, [messages, currentSessionId])
   
   const clipPath = "polygon(25px 0, 35% 0, calc(35% + 25px) 25px, calc(35% + 25px) 70px, 39% 90px, 97.5% 90px, 100% 110px, 100% calc(100% - 25px), calc(100% - 25px) 100%, 0 100%, 0 25px)"
   const clipPathInner = "polygon(25px 0, 34.8% 0, calc(35% + 22px) 25px, calc(35% + 22px) 70px, 38.8% 90px, 97.5% 90px, 100% 110px, 100% calc(100% - 25px), calc(100% - 25px) 100%, 0 100%, 0 25px)"
@@ -189,55 +237,74 @@ export default function MainContent({ className = "" }: Props) {
     setIsGeneratingProject(true)
     setIsModalOpen(false)
     
+    // Add generating message to chat
+    const generatingMessage: ChatMessage = {
+      type: 'assistant',
+      content: `**Creating project "${projectName}"...** \n\nI'm analyzing your requirements and preparing your project setup.`,
+      timestamp: new Date()
+    }
+    setMessages(prev => [...prev, generatingMessage])
+    
+    // Actually create the project in the database
     try {
-      // Add generating message to chat
-      const generatingMessage: ChatMessage = {
-        type: 'assistant',
-        content: `**Generating "${projectName}"...** \n\nThis may take 30-60 seconds. I'm creating:\n- Complete application structure\n- Database schema (${customizedAnalysis.features.length} features)\n- API endpoints\n- Frontend components\n- Deployment configuration\n\nPlease wait...`,
-        timestamp: new Date()
-      }
-      setMessages(prev => [...prev, generatingMessage])
-      
-      // Call enhanced project generation API with full analysis
-      const response = await fetch('/api/ai/generate-project-enhanced', {
+      const projectResponse = await fetch('/api/projects', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Include session cookies
         body: JSON.stringify({
-          projectAnalysis: originalAnalysis, // Use original ProjectAnalysis for enhanced generation
-          projectName: projectName
-        }),
+          name: projectName,
+          description: customizedAnalysis.description || `AI-generated ${customizedAnalysis.projectType} project`,
+          repository: '', // Optional field
+          framework: 'NEXTJS', // Default framework
+          config: {
+            aiGenerated: true,
+            projectType: customizedAnalysis.projectType,
+            complexity: customizedAnalysis.complexity,
+            features: customizedAnalysis.features,
+            template: customizedAnalysis.suggestedTemplate,
+            generatedAt: new Date().toISOString()
+          }
+        })
       })
-
-      const data = await response.json()
-
-      if (data.success) {
-        // Add success message
+      
+      const projectData = await projectResponse.json()
+      
+      if (projectData.success) {
+        // Add success message with actual project ID
         const successMessage: ChatMessage = {
           type: 'assistant',
-          content: `**Project \"${projectName}\" Generated Successfully**\n\n**Type:** ${customizedAnalysis.projectType} (${customizedAnalysis.complexity} complexity)\n**Features:** ${customizedAnalysis.features.length} features included\n\n**AI-Generated Files:**\n${data.generatedFiles ? data.generatedFiles.map(f => `- ${f.filename} (${f.type}): ${f.description}`).join('\n') : 'Custom components, API endpoints, and database schema'}\n\n**Enhancement Status:**\n- Files Written: ${data.enhancement?.filesWritten || 0}\n- Success: ${data.enhancement?.success ? 'Yes' : 'Partial'}\n\n**Project Path:** ${data.projectPath}\n\nYour enhanced project with AI-generated custom code is ready to use!`,
+          content: `**✅ Project "${projectName}" Created Successfully!**\n\n**Project Details:**\n- **Type:** ${customizedAnalysis.projectType}\n- **Complexity:** ${customizedAnalysis.complexity}\n- **Features:** ${customizedAnalysis.features.length} features\n- **Template:** ${customizedAnalysis.suggestedTemplate}\n- **Project ID:** ${projectData.project.id}\n\n**Features Included:**\n${customizedAnalysis.features.map(f => `• ${f}`).join('\n')}\n\n**Database Record Created:**\n• Project saved to PostgreSQL database\n• Development environment configured\n• Production environment configured\n• Available in Projects page\n\n🎉 **Your project has been created and saved!**\n\n→ **[View in Projects Page](/projects)**`,
           timestamp: new Date()
         }
         setMessages(prev => [...prev, successMessage])
       } else {
-        // Add error message
+        console.error('Project creation failed:', projectData)
+        throw new Error(projectData.error || projectData.details || 'Failed to create project')
+      }
+    } catch (error) {
+      console.error('Project creation error:', error)
+      
+      // Handle specific authentication error
+      if (error instanceof Error && (error.message.includes('401') || error.message.includes('Unauthorized'))) {
+        const authError: ChatMessage = {
+          type: 'assistant',
+          content: `**❌ Authentication Required**\n\nYou need to be signed in to create projects.\n\n→ **[Sign In](/api/auth/signin)** to continue\n\nOnce signed in, you can create and manage AI-generated projects.`,
+          timestamp: new Date()
+        }
+        setMessages(prev => [...prev, authError])
+      } else {
         const errorMessage: ChatMessage = {
           type: 'assistant',
-          content: `**Project Generation Failed**\n\nError: ${data.error}\n\nPlease try again or contact support if the issue persists.`,
+          content: `**❌ Project Creation Failed**\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}\n\nPlease ensure you're signed in and try again. If the issue persists, check the console for more details.`,
           timestamp: new Date()
         }
         setMessages(prev => [...prev, errorMessage])
       }
-    } catch (error) {
-      console.error('Project generation error:', error)
-      const errorMessage: ChatMessage = {
-        type: 'assistant',
-        content: `**Network Error**\n\nFailed to generate project due to network issues. Please check your connection and try again.`,
-        timestamp: new Date()
-      }
-      setMessages(prev => [...prev, errorMessage])
     }
+    
+    setIsGeneratingProject(false)
     
     setIsGeneratingProject(false)
   }
@@ -245,12 +312,14 @@ export default function MainContent({ className = "" }: Props) {
   // Convert ProjectAnalysis to ProjectRequirements for backward compatibility
   const convertAnalysisToRequirements = (analysis: ProjectAnalysis): ProjectRequirements => {
     return {
+      isProjectRequest: true, // Always true since we're converting from project analysis
       projectType: analysis.projectType,
       description: analysis.description,
       features: analysis.keyFeatures.map(f => f.name),
       complexity: analysis.complexity,
       suggestedTemplate: analysis.recommendedTemplate?.id || 'nextjs-fullstack', // Use AI-selected template
-      confidence: 85 // Static confidence for converted analysis
+      confidence: 85, // Static confidence for converted analysis
+      reasoning: `Converted from AI project analysis for ${analysis.title}` // Add reasoning
     }
   }
 
@@ -259,7 +328,7 @@ export default function MainContent({ className = "" }: Props) {
     setOriginalAnalysis(projectAnalysis)
     const requirements = convertAnalysisToRequirements(projectAnalysis)
     const defaultProjectName = `${projectAnalysis.projectType.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}`
-    await handleGenerateFromModal(requirements, defaultProjectName)
+    handleGenerateFromModal(requirements, defaultProjectName, projectAnalysis)
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -306,12 +375,12 @@ export default function MainContent({ className = "" }: Props) {
         <div className="flex-1 flex flex-col items-center justify-center relative">
           {/* Debug info - temporarily show state */}
           <div className="absolute top-2 left-2 text-xs text-white/50 z-50">
-            Messages: {messages.length}
+            Messages: {messages.length} | Session: {currentSessionId?.substring(0, 8)}...
           </div>
           
           {/* Welcome content - always visible */}
           <div className="text-[22px] font-light text-white">
-            Hey <span className="font-bold">User Name</span>
+            Hey <span className="font-bold">{session?.user?.name || session?.user?.email || 'User'}</span>
           </div>
           <div className="text-[#FFFFFF66] text-[22px] font-light">
             Whats on your mind today
@@ -417,7 +486,13 @@ export default function MainContent({ className = "" }: Props) {
               
               {/* Clear button */}
               <button
-                onClick={() => setMessages([])}
+                onClick={() => {
+                  setMessages([])
+                  if (typeof window !== 'undefined' && currentSessionId) {
+                    const storageKey = `nexa-chat-messages-${currentSessionId}`
+                    localStorage.removeItem(storageKey)
+                  }
+                }}
                 className="absolute top-2 right-2 px-2 py-1 text-xs bg-black/40 text-white rounded hover:bg-black/60 transition backdrop-blur-sm"
               >
                 Clear
