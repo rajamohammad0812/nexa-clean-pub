@@ -38,9 +38,9 @@ if [ $? -eq 0 ]; then
     echo "🚀 Next steps:"
     echo "1. Start the development server: npm run dev"
     echo "2. Test the chat: node test-chat.js"
-    echo "3. Open http://localhost:3001 in your browser"
+    echo "3. Open http://localhost:3000 in your browser"
     echo ""
-    echo "📖 See CHAT_INTEGRATION.md for detailed testing instructions"
+    echo "📖 See docs/requirements/CHAT_INTEGRATION.md for detailed testing instructions"
 else
     echo "❌ Failed to update API key. Please check your permissions and try again."
     exit 1

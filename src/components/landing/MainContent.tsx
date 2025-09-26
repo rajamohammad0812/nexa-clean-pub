@@ -99,7 +99,7 @@ export default function MainContent({ className = "" }: Props) {
       const savedMessages = localStorage.getItem(storageKey)
       if (savedMessages) {
         try {
-          const parsed = JSON.parse(savedMessages)
+          const parsed = JSON.parse(savedMessages) as any[]
           setMessages(parsed.map((msg: any) => ({
             ...msg,
             timestamp: new Date(msg.timestamp)

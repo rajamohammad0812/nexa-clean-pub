@@ -12,7 +12,7 @@ async function testChat() {
     console.log(`Chat type: ${chatType}`)
     console.log('---')
 
-    const response = await fetch('http://localhost:3001/api/chat', {
+    const response = await fetch('http://localhost:3000/api/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

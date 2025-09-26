@@ -623,7 +623,7 @@ export async function generateProjectFiles(
 }
 
 // Get project file tree for display
-export async function getProjectFileTree(projectId: string, customPath?: string): Promise<any> {
+export async function getProjectFileTree(projectId: string, customPath?: string): Promise<Record<string, any> | null> {
   const projectDir = getProjectPath(projectId, customPath)
   
   try {
@@ -635,9 +635,9 @@ export async function getProjectFileTree(projectId: string, customPath?: string)
   }
 }
 
-async function buildFileTree(dirPath: string, basePath: string): Promise<any> {
+async function buildFileTree(dirPath: string, basePath: string): Promise<Record<string, any>> {
   const items = await fs.readdir(dirPath, { withFileTypes: true })
-  const tree: any = {}
+  const tree: Record<string, any> = {}
 
   for (const item of items) {
     const itemPath = path.join(dirPath, item.name)

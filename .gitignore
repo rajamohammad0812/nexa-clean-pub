@@ -34,8 +34,6 @@ yarn-error.log*
 
 # docker
 /.docker/
-.dockerignore
-Dockerfile
 
 # editors
 .vscode/
@@ -48,4 +46,10 @@ Dockerfile
 *.tsbuildinfo
 next-env.d.ts
 
+# project organization
+/temp/
+/archives/
+/generated-projects/
+
+# prisma generated files
 /generated/prisma

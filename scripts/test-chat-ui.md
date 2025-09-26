@@ -15,7 +15,7 @@ The chat interface has been completely updated to **display responses properly**
 
 ### 🧪 **How to Test:**
 
-1. **Open Browser**: Go to http://localhost:3001
+1. **Open Browser**: Go to http://localhost:3000
 2. **Send Message**: Type anything (e.g., "Hi" or "Help me automate email") and press Enter
 3. **Watch Magic**: The interface will:
    - Switch to chat view
