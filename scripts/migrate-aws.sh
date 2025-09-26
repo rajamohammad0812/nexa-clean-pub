@@ -13,15 +13,29 @@ NC='\033[0m' # No Color
 
 echo -e "${GREEN}🔄 Running database migrations for AWS deployment${NC}"
 
-# Check if DATABASE_URL is set
-if [ -z "$DATABASE_URL" ]; then
-    echo -e "${RED}❌ DATABASE_URL environment variable is not set${NC}"
-    echo "Please set your DATABASE_URL to point to your AWS RDS instance"
-    echo "Example: export DATABASE_URL='postgresql://username:password@your-rds-endpoint.region.rds.amazonaws.com:5432/nexabuilder'"
+# Check if DATABASE_URL is set, or if separate DB variables are set
+if [ -z "$DATABASE_URL" ] && { [ -z "$DB_HOST" ] || [ -z "$DB_USERNAME" ] || [ -z "$DB_PASSWORD" ] || [ -z "$DB_NAME" ]; }; then
+    echo -e "${RED}❌ Database configuration is incomplete${NC}"
+    echo "Please set either:"
+    echo "  Option 1: DATABASE_URL=postgresql://username:password@host:port/database"
+    echo "  Option 2: DB_HOST, DB_USERNAME, DB_PASSWORD, and DB_NAME separately"
+    echo ""
+    echo "Examples:"
+    echo "  export DATABASE_URL='postgresql://myuser:mypass@mydb.abc123.us-east-1.rds.amazonaws.com:5432/nexabuilder'"
+    echo "  OR"
+    echo "  export DB_HOST='mydb.abc123.us-east-1.rds.amazonaws.com'"
+    echo "  export DB_USERNAME='myuser'"
+    echo "  export DB_PASSWORD='mypass'"
+    echo "  export DB_NAME='nexabuilder'"
     exit 1
 fi
 
-echo -e "${YELLOW}📋 Database URL: ${DATABASE_URL%:*}:****@${DATABASE_URL##*@}${NC}"
+# Show database configuration (masked password)
+if [ -n "$DATABASE_URL" ]; then
+    echo -e "${YELLOW}📋 Database URL: ${DATABASE_URL%:*}:****@${DATABASE_URL##*@}${NC}"
+else
+    echo -e "${YELLOW}📋 Database: ${DB_USERNAME}:****@${DB_HOST}:${DB_PORT:-5432}/${DB_NAME}${NC}"
+fi
 
 # Generate Prisma client
 echo -e "${YELLOW}⚙️  Generating Prisma client...${NC}"
