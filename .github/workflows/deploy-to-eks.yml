@@ -1,11 +1,18 @@
-name: Deploy to AWS EKS
+name: Deploy NexaBuilder to AWS EKS
 
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
-  workflow_dispatch: # Allow manual triggers
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+        - production
+        - staging
 
 env:
   AWS_REGION: us-east-1
@@ -35,7 +42,7 @@ jobs:
     - name: Create ECR repository if it doesn't exist
       run: |
         aws ecr describe-repositories --repository-names $ECR_REPOSITORY --region $AWS_REGION || \
-        aws ecr create-repository --repository-name $ECR_REPOSITORY --region $AWS_REGION
+        aws ecr create-repository --repository-name $ECR_REPOSITORY --region $AWS_REGION --image-scanning-configuration scanOnPush=true
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -52,52 +59,73 @@ jobs:
         platforms: linux/amd64
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        build-args: |
+          BUILDKIT_INLINE_CACHE=1
 
     - name: Install kubectl
       uses: azure/setup-kubectl@v3
       with:
-        version: 'v1.28.0'
+        version: 'v1.30.0'
 
     - name: Update kubeconfig
       run: |
         aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER
+        kubectl cluster-info
 
-    - name: Prepare deployment with secrets
+    - name: Prepare deployment manifests
       run: |
-        # Substitute placeholders with actual secret values
-        sed -i 's|__DATABASE_URL__|${{ secrets.DATABASE_URL }}|g' k8s/deployment.yaml
-        sed -i 's|__DB_HOST__|${{ secrets.DB_HOST }}|g' k8s/deployment.yaml
-        sed -i 's|__DB_PORT__|${{ secrets.DB_PORT }}|g' k8s/deployment.yaml
-        sed -i 's|__DB_NAME__|${{ secrets.DB_NAME }}|g' k8s/deployment.yaml
-        sed -i 's|__DB_USERNAME__|${{ secrets.DB_USERNAME }}|g' k8s/deployment.yaml
-        sed -i 's|__DB_PASSWORD__|${{ secrets.DB_PASSWORD }}|g' k8s/deployment.yaml
-        sed -i 's|__NEXTAUTH_SECRET__|${{ secrets.NEXTAUTH_SECRET }}|g' k8s/deployment.yaml
-        sed -i 's|__NEXTAUTH_URL__|${{ secrets.NEXTAUTH_URL }}|g' k8s/deployment.yaml
-        sed -i 's|__OPENAI_API_KEY__|${{ secrets.OPENAI_API_KEY }}|g' k8s/deployment.yaml
+        # Create temporary deployment file with secrets
+        cp k8s/deployment.yaml k8s/deployment-temp.yaml
         
-        # Update image in deployment file
-        sed -i 's|image: 470880515336.dkr.ecr.us-east-1.amazonaws.com/nexabuilder:latest|image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}|g' k8s/deployment.yaml
+        # Substitute placeholders with actual secret values
+        sed -i "s|__DATABASE_URL__|${{ secrets.DATABASE_URL }}|g" k8s/deployment-temp.yaml
+        sed -i "s|__DB_HOST__|${{ secrets.DB_HOST }}|g" k8s/deployment-temp.yaml
+        sed -i "s|__DB_PORT__|${{ secrets.DB_PORT }}|g" k8s/deployment-temp.yaml
+        sed -i "s|__DB_NAME__|${{ secrets.DB_NAME }}|g" k8s/deployment-temp.yaml
+        sed -i "s|__DB_USERNAME__|${{ secrets.DB_USERNAME }}|g" k8s/deployment-temp.yaml
+        sed -i "s|__DB_PASSWORD__|${{ secrets.DB_PASSWORD }}|g" k8s/deployment-temp.yaml
+        sed -i "s|__NEXTAUTH_SECRET__|${{ secrets.NEXTAUTH_SECRET }}|g" k8s/deployment-temp.yaml
+        sed -i "s|__NEXTAUTH_URL__|${{ secrets.NEXTAUTH_URL }}|g" k8s/deployment-temp.yaml
+        sed -i "s|__OPENAI_API_KEY__|${{ secrets.OPENAI_API_KEY }}|g" k8s/deployment-temp.yaml
+        
+        # Update image to the newly built one
+        sed -i "s|image: .*nexabuilder.*|image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}|g" k8s/deployment-temp.yaml
+        
+        echo "Final deployment manifest:"
+        cat k8s/deployment-temp.yaml
 
-    - name: Apply deployment manifests
+    - name: Deploy to EKS
       run: |
-        kubectl apply -f k8s/deployment.yaml
-
-    - name: Wait for rollout to complete
-      run: |
-        kubectl rollout status deployment/nexabuilder-app -n nexabuilder --timeout=600s
+        echo "Applying deployment to EKS cluster..."
+        kubectl apply -f k8s/deployment-temp.yaml
+        
+        echo "Waiting for deployment to complete..."
+        kubectl rollout status deployment/nexabuilder-app -n nexabuilder --timeout=10m
 
     - name: Verify deployment
       run: |
-        kubectl get pods -n nexabuilder
+        echo "=== DEPLOYMENT STATUS ==="
+        kubectl get deployments -n nexabuilder
+        
+        echo "=== POD STATUS ==="
+        kubectl get pods -n nexabuilder -o wide
+        
+        echo "=== SERVICE STATUS ==="
         kubectl get services -n nexabuilder
+        
+        echo "=== INGRESS STATUS ==="
         kubectl get ingress -n nexabuilder
+        
+        echo "=== RECENT POD LOGS ==="
+        kubectl logs -n nexabuilder deployment/nexabuilder-app --tail=20 || echo "No logs available yet"
 
-    - name: Get application URL
+    - name: Clean up
       run: |
-        echo "Application deployed successfully!"
-        echo "Pods status:"
-        kubectl get pods -n nexabuilder
-        echo "Service status:"
-        kubectl get services -n nexabuilder
-        echo "Ingress status:"
-        kubectl get ingress -n nexabuilder
+        rm -f k8s/deployment-temp.yaml
+
+    - name: Deployment Summary
+      run: |
+        echo "🎉 NexaBuilder deployment completed successfully!"
+        echo "📊 Image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}"
+        echo "🌍 Cluster: ${{ env.EKS_CLUSTER }}"
+        echo "📋 Check your ingress for the application URL"

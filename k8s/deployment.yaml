@@ -2,6 +2,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: nexabuilder
+  labels:
+    name: nexabuilder
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -10,8 +12,14 @@ metadata:
   namespace: nexabuilder
   labels:
     app: nexabuilder
+    version: v1
 spec:
   replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: nexabuilder
@@ -19,12 +27,15 @@ spec:
     metadata:
       labels:
         app: nexabuilder
+        version: v1
     spec:
       containers:
       - name: nexabuilder
         image: 470880515336.dkr.ecr.us-east-1.amazonaws.com/nexabuilder:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 3000
+          name: http
         env:
         - name: NODE_ENV
           value: "production"
@@ -33,7 +44,7 @@ spec:
         - name: NEXT_PUBLIC_APP_NAME
           value: "Nexa Builder"
         - name: NEXT_PUBLIC_BASE_URL
-          value: "https://dev.nexabuilder.net"
+          value: "__NEXTAUTH_URL__"
         - name: DATABASE_URL
           value: "__DATABASE_URL__"
         - name: DB_HOST
@@ -58,51 +69,80 @@ spec:
           value: "info"
         resources:
           requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
             memory: "1Gi"
             cpu: "500m"
-          limits:
-            memory: "2Gi"
-            cpu: "1000m"
         livenessProbe:
           httpGet:
             path: /api/health
             port: 3000
-          initialDelaySeconds: 180
+            httpHeaders:
+            - name: Accept
+              value: application/json
+          initialDelaySeconds: 60
           periodSeconds: 30
           timeoutSeconds: 10
+          failureThreshold: 3
         readinessProbe:
           httpGet:
             path: /api/health
             port: 3000
-          initialDelaySeconds: 120
-          periodSeconds: 15
-          timeoutSeconds: 10
+            httpHeaders:
+            - name: Accept
+              value: application/json
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 12
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: nexabuilder-service
   namespace: nexabuilder
+  labels:
+    app: nexabuilder
 spec:
   selector:
     app: nexabuilder
   ports:
-    - protocol: TCP
+    - name: http
+      protocol: TCP
       port: 80
       targetPort: 3000
   type: ClusterIP
+  sessionAffinity: None
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: nexabuilder-ingress
   namespace: nexabuilder
+  labels:
+    app: nexabuilder
   annotations:
     kubernetes.io/ingress.class: "alb"
     alb.ingress.kubernetes.io/scheme: "internet-facing"
     alb.ingress.kubernetes.io/target-type: "ip"
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
     alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/healthcheck-path: '/api/health'
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: '30'
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: '5'
+    alb.ingress.kubernetes.io/healthy-threshold-count: '2'
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: '3'
 spec:
   rules:
   - host: dev.nexabuilder.net
