@@ -46,7 +46,7 @@ aws ecr describe-repositories --repository-names $ECR_REPOSITORY --region $AWS_R
 echo "🏗️  Building Docker image for linux/amd64..."
 docker buildx build \
     --platform linux/amd64 \
-    --file Dockerfile.production \
+    --file Dockerfile.simple \
     --tag $ECR_REPOSITORY:$IMAGE_TAG \
     --tag $ECR_REPOSITORY:latest \
     --load \
