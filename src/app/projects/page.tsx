@@ -176,22 +176,59 @@ export default function ProjectsPage() {
 
   // Load projects on component mount
   useEffect(() => {
+    console.log('ProjectsPage: useEffect running')
+    console.log('ProjectsPage: current loading state:', isLoading)
     fetchProjects()
   }, [])
 
+  // Debug component state
+  useEffect(() => {
+    console.log(
+      'ProjectsPage: State changed - loading:',
+      isLoading,
+      'error:',
+      error,
+      'projects count:',
+      projects.length,
+    )
+  }, [isLoading, error, projects])
+
   const fetchProjects = async () => {
     try {
-      const response = await fetch('/api/projects')
+      console.log('Fetching projects...')
+      // Add timeout to prevent hanging
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+
+      const response = await fetch('/api/projects', {
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      clearTimeout(timeoutId)
+      console.log('Response status:', response.status)
+
       const data = await response.json()
+      console.log('Response data:', data)
 
       if (data.success) {
         setProjects(data.projects)
+        console.log('Projects loaded successfully:', data.projects.length, 'projects')
       } else {
-        setError('Failed to load projects')
+        setError('Failed to load projects: ' + (data.error || 'Unknown error'))
       }
     } catch (err) {
-      setError('Failed to load projects')
       console.error('Error fetching projects:', err)
+      if (err instanceof Error) {
+        if (err.name === 'AbortError') {
+          setError('Request timeout: Failed to load projects (server might be slow)')
+        } else {
+          setError('Network error: ' + err.message)
+        }
+      } else {
+        setError('Network error: Failed to load projects')
+      }
     } finally {
       setIsLoading(false)
     }
