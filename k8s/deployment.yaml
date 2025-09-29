@@ -1,0 +1,117 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nexabuilder
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nexabuilder-app
+  namespace: nexabuilder
+  labels:
+    app: nexabuilder
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nexabuilder
+  template:
+    metadata:
+      labels:
+        app: nexabuilder
+    spec:
+      containers:
+      - name: nexabuilder
+        image: 470880515336.dkr.ecr.us-east-1.amazonaws.com/nexabuilder:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: NEXT_TELEMETRY_DISABLED
+          value: "1"
+        - name: NEXT_PUBLIC_APP_NAME
+          value: "Nexa Builder"
+        - name: NEXT_PUBLIC_BASE_URL
+          value: "https://dev.nexabuilder.net"
+        - name: DATABASE_URL
+          value: "__DATABASE_URL__"
+        - name: DB_HOST
+          value: "__DB_HOST__"
+        - name: DB_PORT
+          value: "__DB_PORT__"
+        - name: DB_NAME
+          value: "__DB_NAME__"
+        - name: DB_USERNAME
+          value: "__DB_USERNAME__"
+        - name: DB_PASSWORD
+          value: "__DB_PASSWORD__"
+        - name: NEXTAUTH_SECRET
+          value: "__NEXTAUTH_SECRET__"
+        - name: NEXTAUTH_URL
+          value: "__NEXTAUTH_URL__"
+        - name: OPENAI_API_KEY
+          value: "__OPENAI_API_KEY__"
+        - name: AWS_REGION
+          value: "us-east-1"
+        - name: LOG_LEVEL
+          value: "info"
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 180
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 120
+          periodSeconds: 15
+          timeoutSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nexabuilder-service
+  namespace: nexabuilder
+spec:
+  selector:
+    app: nexabuilder
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nexabuilder-ingress
+  namespace: nexabuilder
+  annotations:
+    kubernetes.io/ingress.class: "alb"
+    alb.ingress.kubernetes.io/scheme: "internet-facing"
+    alb.ingress.kubernetes.io/target-type: "ip"
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+spec:
+  rules:
+  - host: dev.nexabuilder.net
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: nexabuilder-service
+            port:
+              number: 80
