@@ -1,56 +1,79 @@
-# AWS-optimized production Dockerfile for Next.js application
-# Single-stage build to avoid TypeScript build issues
+# Multi-stage build for Next.js standalone application
+FROM node:18-alpine AS base
 
-FROM node:18-alpine
-
-# Install system dependencies
-RUN apk add --no-cache libc6-compat curl
-
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY package.json package-lock.json* ./
+RUN npm ci --force
 
-# Install all dependencies with force to handle conflicts
-RUN npm install --force --no-audit --no-fund
-
-# Copy source code
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Generate Prisma client
 RUN npx prisma generate
 
-# Set build environment
+# Set environment for build
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+
+# Build Next.js application with standalone output
+RUN npm run build
+
+# Verify standalone build was created
+RUN ls -la .next/standalone/ && ls -la .next/standalone/server.js
+
+# Production image, copy all the files and run next
+FROM base AS runner
+WORKDIR /app
+
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Create a relaxed tsconfig for production builds
-RUN echo '{"extends": "./tsconfig.json", "compilerOptions": {"strict": false, "skipLibCheck": true, "noUnusedLocals": false, "noUnusedParameters": false, "noImplicitAny": false, "allowJs": true}}' > tsconfig.prod.json
-
-# Try to build, continue even if TypeScript errors occur
-RUN npm run build || (echo "Build had TypeScript errors but continuing..." && ls -la .next/)
-
-# Verify standalone build exists
-RUN ls -la .next/ || echo "No .next directory found"
-
 # Create non-root user
-RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
 
-# Create necessary directories
-RUN mkdir -p generated-projects && chown -R nextjs:nodejs /app
+# Install curl for health checks
+RUN apk add --no-cache curl
+
+# Copy the public folder from the project as this is not included in standalone build
+COPY --from=builder /app/public ./public
+
+# Set the correct permission for prerender cache
+RUN mkdir .next
+RUN chown nextjs:nodejs .next
+
+# Automatically leverage output traces to reduce image size
+# https://nextjs.org/docs/advanced-features/output-file-tracing
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Copy Prisma files for database operations
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
+
+# Create generated-projects directory
+RUN mkdir -p generated-projects && chown nextjs:nodejs generated-projects
 
 USER nextjs
 
 # Expose port
 EXPOSE 3000
 
-# Environment variables
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Health check for AWS
+# Health check for AWS Load Balancer
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
   CMD curl -f http://localhost:3000/api/health || exit 1
 
-# Start with database migration then app
-CMD ["sh", "-c", "echo 'Starting NexaBuilder...'; npx prisma migrate deploy 2>/dev/null || echo 'Migration skipped'; echo 'Starting server...'; exec node server.js"]
+# Start application with database migration
+CMD ["sh", "-c", "echo 'Starting NexaBuilder...'; npx prisma migrate deploy 2>/dev/null || echo 'Migration skipped'; echo 'Starting Next.js server...'; exec node server.js"]

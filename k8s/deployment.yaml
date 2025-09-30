@@ -44,25 +44,25 @@ spec:
         - name: NEXT_PUBLIC_APP_NAME
           value: "Nexa Builder"
         - name: NEXT_PUBLIC_BASE_URL
-          value: "__NEXTAUTH_URL__"
+          value: "https://dev.nexabuilder.net"
         - name: DATABASE_URL
-          value: "__DATABASE_URL__"
+          value: "postgresql://postgresadmin:password@nexabuilder-dev-rds.coz0yeck4uy6.us-east-1.rds.amazonaws.com:5432/nexabuilder"
         - name: DB_HOST
-          value: "__DB_HOST__"
+          value: "nexabuilder-dev-rds.coz0yeck4uy6.us-east-1.rds.amazonaws.com"
         - name: DB_PORT
-          value: "__DB_PORT__"
+          value: "5432"
         - name: DB_NAME
-          value: "__DB_NAME__"
+          value: "nexabuilder"
         - name: DB_USERNAME
-          value: "__DB_USERNAME__"
+          value: "postgresadmin"
         - name: DB_PASSWORD
-          value: "__DB_PASSWORD__"
+          value: "password"
         - name: NEXTAUTH_SECRET
-          value: "__NEXTAUTH_SECRET__"
+          value: "zYvwtcgU7ddXR9wSKVdA9dZ3d5R9CouvKO+dFsQ6EOg="
         - name: NEXTAUTH_URL
-          value: "__NEXTAUTH_URL__"
+          value: "https://dev.nexabuilder.net"
         - name: OPENAI_API_KEY
-          value: "__OPENAI_API_KEY__"
+          value: "sk-test-key-placeholder"
         - name: AWS_REGION
           value: "us-east-1"
         - name: LOG_LEVEL
@@ -81,10 +81,10 @@ spec:
             httpHeaders:
             - name: Accept
               value: application/json
-          initialDelaySeconds: 60
+          initialDelaySeconds: 120
           periodSeconds: 30
           timeoutSeconds: 10
-          failureThreshold: 3
+          failureThreshold: 5
         readinessProbe:
           httpGet:
             path: /api/health
@@ -92,18 +92,18 @@ spec:
             httpHeaders:
             - name: Accept
               value: application/json
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 3
+          initialDelaySeconds: 90
+          periodSeconds: 15
+          timeoutSeconds: 10
+          failureThreshold: 5
         startupProbe:
           httpGet:
             path: /api/health
             port: 3000
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          timeoutSeconds: 3
-          failureThreshold: 12
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 20
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
 ---

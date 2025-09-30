@@ -15,6 +15,9 @@ const nextConfig = {
 	typescript: {
 		ignoredBuildErrors: true,
 	},
+	// Ensure proper standalone build
+	poweredByHeader: false,
+	generateEtags: false,
 }
 
 export default withBundleAnalyzer(nextConfig)
