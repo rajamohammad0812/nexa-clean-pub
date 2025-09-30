@@ -30,6 +30,7 @@ model User {
   projects      Project[]
   workflows     Workflow[]
   deployments   Deployment[]
+  aiProjects    AIProject[]
   
   @@map("users")
 }
@@ -296,6 +297,38 @@ model Template {
 }
 
 // ===============================
+// AI PROJECTS SYSTEM
+// ===============================
+
+model AIProject {
+  id              String          @id @default(cuid())
+  name            String
+  description     String?
+  projectType     String
+  complexity      String
+  confidence      Float
+  userPrompt      String
+  keyFeatures     Json
+  techStack       Json
+  estimatedWeeks  Int?
+  templateId      String
+  templateName    String
+  generatedFiles  Json?
+  projectPath     String?
+  status          AIProjectStatus @default(GENERATING)
+  generationLogs  String?
+  errorMessage    String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  completedAt     DateTime?
+  userId          String
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("ai_projects")
+}
+
+// ===============================
 // ENUMS
 // ===============================
 
@@ -377,4 +410,11 @@ enum DeploymentStatus {
   FAILED
   CANCELLED
   ROLLBACK
+}
+
+enum AIProjectStatus {
+  GENERATING
+  SUCCESS
+  FAILED
+  CANCELLED
 }

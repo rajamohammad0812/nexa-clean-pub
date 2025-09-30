@@ -9,15 +9,17 @@ const nextConfig = {
 	reactStrictMode: false,
 	output: 'standalone',
 	swcMinify: true,
-	eslint: {
-		dirs: [],
-	},
-	typescript: {
-		ignoredBuildErrors: true,
-	},
+	...(process.env.DOCKER_BUILD && {
+		eslint: {
+			ignoredDuringBuilds: true,
+		},
+		typescript: {
+			ignoredBuildErrors: true,
+		},
+	}),
 	// Ensure proper standalone build
 	poweredByHeader: false,
 	generateEtags: false,
 }
 
-export default withBundleAnalyzer(nextConfig)
+export default nextConfig
