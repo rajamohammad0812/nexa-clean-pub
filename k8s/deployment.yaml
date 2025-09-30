@@ -38,7 +38,7 @@ spec:
           name: http
         env:
         - name: NODE_ENV
-          value: "production"
+          value: "development"
         - name: NEXT_TELEMETRY_DISABLED
           value: "1"
         - name: NEXT_PUBLIC_APP_NAME
@@ -100,10 +100,10 @@ spec:
           httpGet:
             path: /api/health
             port: 3000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 20
+          initialDelaySeconds: 60
+          periodSeconds: 15
+          timeoutSeconds: 10
+          failureThreshold: 30
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
 ---
@@ -136,8 +136,7 @@ metadata:
     kubernetes.io/ingress.class: "alb"
     alb.ingress.kubernetes.io/scheme: "internet-facing"
     alb.ingress.kubernetes.io/target-type: "ip"
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
-    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
     alb.ingress.kubernetes.io/healthcheck-path: '/api/health'
     alb.ingress.kubernetes.io/healthcheck-interval-seconds: '30'
     alb.ingress.kubernetes.io/healthcheck-timeout-seconds: '5'

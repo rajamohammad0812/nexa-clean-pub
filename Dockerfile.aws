@@ -23,8 +23,11 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
-# Build Next.js application with standalone output (skip TypeScript checking)
-RUN npm run build:docker
+# Copy Docker-specific Next.js config
+RUN cp next.docker.config.mjs next.config.mjs
+
+# Build Next.js application with standalone output
+RUN npm run build
 
 # Verify standalone build was created
 RUN ls -la .next/standalone/ && ls -la .next/standalone/server.js

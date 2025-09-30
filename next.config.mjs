@@ -9,10 +9,7 @@ const nextConfig = {
 	reactStrictMode: false,
 	output: 'standalone',
 	swcMinify: true,
-	...(process.env.DOCKER_BUILD && {
-		eslint: {
-			ignoredDuringBuilds: true,
-		},
+	...(process.env.TYPESCRIPT_BUILD === '0' && {
 		typescript: {
 			ignoredBuildErrors: true,
 		},
