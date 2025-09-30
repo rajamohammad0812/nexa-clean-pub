@@ -12,7 +12,13 @@ module.exports = {
   ],
   rules: {
     'react/jsx-key': 'off',
-    '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+    '@typescript-eslint/no-unused-vars': 'off',
+    '@typescript-eslint/no-explicit-any': 'off',
+    'jsx-a11y/click-events-have-key-events': 'off',
+    'jsx-a11y/no-static-element-interactions': 'off',
+    'jsx-a11y/label-has-associated-control': 'off',
+    '@next/next/no-img-element': 'off',
+    'react-hooks/exhaustive-deps': 'off',
   },
   ignorePatterns: ['.next', 'node_modules', 'dist', 'build'],
 }

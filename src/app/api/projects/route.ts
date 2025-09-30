@@ -33,7 +33,7 @@ export async function GET(_request: NextRequest) {
 
     // If no session, try to use development user
     let userId = session?.user?.id
-    
+
     if (!userId) {
       // For development: find or create a default user
       try {
@@ -43,7 +43,7 @@ export async function GET(_request: NextRequest) {
             email: 'dev@nexa.com',
             name: 'Development User',
           },
-          update: {}
+          update: {},
         })
         userId = defaultUser.id
         console.log('Using development user for GET projects:', defaultUser.id)
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
 
     // If no session, try to create a development user
     let userId = session?.user?.id
-    
+
     if (!userId) {
       // For development: create a default user
       try {
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
             email: 'dev@nexa.com',
             name: 'Development User',
           },
-          update: {}
+          update: {},
         })
         userId = defaultUser.id
         console.log('Created/found development user:', defaultUser.id)
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
     console.log('About to validate with schema...')
     console.log('ProjectSchema type:', typeof ProjectSchema)
     console.log('ProjectSchema parse method:', typeof ProjectSchema.parse)
-    
+
     let validatedData
     try {
       validatedData = ProjectSchema.parse(body)
@@ -153,16 +153,27 @@ export async function POST(request: NextRequest) {
       if (!body.name || typeof body.name !== 'string') {
         return NextResponse.json(
           { error: 'Project name is required and must be a string' },
-          { status: 400 }
+          { status: 400 },
         )
       }
-      if (!body.framework || !['NEXTJS', 'REACT', 'VUE', 'ANGULAR', 'SVELTE', 'NODEJS', 'PYTHON', 'GOLANG', 'RUST', 'DOCKER'].includes(body.framework)) {
-        return NextResponse.json(
-          { error: 'Valid framework is required' },
-          { status: 400 }
-        )
+      if (
+        !body.framework ||
+        ![
+          'NEXTJS',
+          'REACT',
+          'VUE',
+          'ANGULAR',
+          'SVELTE',
+          'NODEJS',
+          'PYTHON',
+          'GOLANG',
+          'RUST',
+          'DOCKER',
+        ].includes(body.framework)
+      ) {
+        return NextResponse.json({ error: 'Valid framework is required' }, { status: 400 })
       }
-      
+
       validatedData = {
         name: body.name,
         description: body.description || null,
@@ -213,7 +224,7 @@ export async function POST(request: NextRequest) {
     if (customPath) {
       console.log('Using custom project path:', customPath)
     }
-    
+
     try {
       const projectPath = await generateProjectFiles(
         project.id,
@@ -222,7 +233,7 @@ export async function POST(request: NextRequest) {
         'nextjs-fullstack', // Default template
         undefined, // ProjectAnalysis - could be passed from config
         projectData.config?.features || [], // Features from AI analysis
-        customPath // Custom path for project generation
+        customPath, // Custom path for project generation
       )
       console.log('Project files generated at:', projectPath)
     } catch (fileError) {
@@ -242,7 +253,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Invalid input data', details: error.errors },
+        { error: 'Invalid input data', details: error.issues },
         { status: 400 },
       )
     }

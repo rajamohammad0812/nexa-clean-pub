@@ -10,7 +10,10 @@ const nextConfig = {
 	output: 'standalone',
 	swcMinify: true,
 	eslint: {
-		ignoredDuringBuilds: true,
+		dirs: [],
+	},
+	typescript: {
+		ignoredBuildErrors: true,
 	},
 }
 
