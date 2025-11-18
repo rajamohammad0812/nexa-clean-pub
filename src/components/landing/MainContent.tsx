@@ -2,10 +2,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import generalChatIcon from '@/components/assets/img/MainContent/generalChat.svg'
-import ProjectGenerationModal from '@/components/ai/ProjectGenerationModal'
-import ProjectAnalysisCard from '@/components/ai/ProjectAnalysisCard'
-import { ProjectRequirements } from '@/lib/ai/project-generator'
-import { ProjectAnalysis, AnalysisRequest, AnalysisResponse } from '@/types/ai-analysis'
 import searchIcon from '@/components/assets/img/MainContent/search.svg'
 import micIcon from '@/components/assets/img/MainContent/mic.svg'
 import sendArrowIcon from '@/components/assets/img/MainContent/sendArrow.svg'
@@ -58,72 +54,31 @@ function CutoutShell({
 }
 
 interface ChatMessage {
-  type: 'user' | 'assistant'
+  role: 'user' | 'assistant'
   content: string
   timestamp: Date
-  projectAnalysis?: ProjectAnalysis
-  showCreateButton?: boolean
-  confidence?: number
+}
+
+interface AgentStep {
+  type: 'tool_call' | 'tool_result' | 'response' | 'progress'
+  content: string
+  tool_name?: string
+  progress?: {
+    current: number
+    total: number
+    percentage: number
+  }
 }
 
 export default function MainContent({ className = '' }: Props) {
-  const { data: session, status } = useSession()
+  const { data: session } = useSession()
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [isGeneratingProject, setIsGeneratingProject] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [selectedAnalysis, setSelectedAnalysis] = useState<ProjectRequirements | null>(null)
-  const [, setOriginalAnalysis] = useState<ProjectAnalysis | null>(null)
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
+  const [agentSteps, setAgentSteps] = useState<AgentStep[]>([])
+  const [showCompletionModal, setShowCompletionModal] = useState(false)
+  const [completedProjectName, setCompletedProjectName] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  // Session-aware chat management
-  useEffect(() => {
-    if (status === 'loading') return // Wait for session to load
-
-    const sessionId = session?.user?.id || session?.user?.email || 'anonymous'
-
-    // If session changed, reset chat for new session
-    if (currentSessionId !== sessionId) {
-      console.log('Session changed from', currentSessionId, 'to', sessionId, '- resetting chat')
-      setMessages([]) // Clear messages for fresh session
-      setCurrentSessionId(sessionId)
-
-      // Clear any old localStorage data
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('nexa-chat-messages')
-      }
-      return
-    }
-
-    // Load messages for current session
-    if (typeof window !== 'undefined' && sessionId) {
-      const storageKey = `nexa-chat-messages-${sessionId}`
-      const savedMessages = localStorage.getItem(storageKey)
-      if (savedMessages) {
-        try {
-          const parsed = JSON.parse(savedMessages) as ChatMessage[]
-          setMessages(
-            parsed.map((msg: ChatMessage) => ({
-              ...msg,
-              timestamp: new Date(msg.timestamp),
-            })),
-          )
-        } catch (error) {
-          console.error('Failed to load saved messages:', error)
-        }
-      }
-    }
-  }, [session, status, currentSessionId])
-
-  // Save messages to localStorage whenever they change (session-specific)
-  useEffect(() => {
-    if (typeof window !== 'undefined' && messages.length > 0 && currentSessionId) {
-      const storageKey = `nexa-chat-messages-${currentSessionId}`
-      localStorage.setItem(storageKey, JSON.stringify(messages))
-    }
-  }, [messages, currentSessionId])
 
   const clipPath =
     'polygon(25px 0, 35% 0, calc(35% + 25px) 25px, calc(35% + 25px) 70px, 39% 90px, 97.5% 90px, 100% 110px, 100% calc(100% - 25px), calc(100% - 25px) 100%, 0 100%, 0 25px)'
@@ -137,7 +92,7 @@ export default function MainContent({ className = '' }: Props) {
         chatContainer.scrollTop = chatContainer.scrollHeight
       }
     }
-  }, [messages])
+  }, [messages, agentSteps])
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return
@@ -145,210 +100,94 @@ export default function MainContent({ className = '' }: Props) {
     const userMessage = inputValue.trim()
     setInputValue('')
 
-    // Add user message to chat
-    const newUserMessage: ChatMessage = {
-      type: 'user',
+    const newMessage: ChatMessage = {
+      role: 'user',
       content: userMessage,
       timestamp: new Date(),
     }
-    setMessages((prev) => [...prev, newUserMessage])
+    setMessages((prev) => [...prev, newMessage])
+    setAgentSteps([])
 
     setIsLoading(true)
+
     try {
-      // First, analyze if this is a project request
-      const analysisRequest: AnalysisRequest = {
-        userPrompt: userMessage,
-        context: {
-          userSkillLevel: 'intermediate', // Could be customized based on user profile
-          budget: 'medium',
-          timeline: 'normal',
-        },
-      }
-
-      const analysisResponse = await fetch('/api/analyze-project', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(analysisRequest),
-      })
-      const analysisData: AnalysisResponse = await analysisResponse.json()
-
-      let projectAnalysis = null
-      let showCreateButton = false
-
-      if (analysisData.success && analysisData.analysis) {
-        projectAnalysis = analysisData.analysis
-        // Show create button if we have a valid project analysis with good confidence
-        showCreateButton = analysisData.confidence > 0.7
-      }
-      // If analysis failed with "Not a project request", that's normal - just continue with regular chat
-
-      // Get regular chat response
-      const response = await fetch('/api/chat', {
+      const response = await fetch('/api/agent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           message: userMessage,
-          type: 'general',
+          projectId: 'workspace',
+          conversationHistory: messages,
         }),
       })
 
-      const data = await response.json()
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      let finalResponse = ''
 
-      if (data.success) {
-        let aiContent = data.response
+      if (!reader) throw new Error('No response stream')
 
-        // If it's a project request, enhance the response
-        if (showCreateButton && projectAnalysis && analysisData.confidence) {
-          const confidencePercent = Math.round(analysisData.confidence * 100)
-          const features = projectAnalysis.keyFeatures
-            .slice(0, 3)
-            .map((f) => f.name)
-            .join(', ')
-          aiContent += `\n\n**I detected you want to create a ${projectAnalysis.title}**\n\nProject Type: ${projectAnalysis.projectType}\nConfidence: ${confidencePercent}%\nKey Features: ${features}\nComplexity: ${projectAnalysis.complexity}\nEstimated Time: ${projectAnalysis.estimatedTimeWeeks} weeks\nRecommended Template: ${projectAnalysis.recommendedTemplate?.name || 'Next.js Fullstack'}\n\nI can generate a complete application for you with all the code, database setup, and deployment configuration.`
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value)
+        const lines = chunk.split('\n')
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6))
+
+              if (data.type === 'tool_call') {
+                setAgentSteps((prev) => [...prev, data])
+              } else if (data.type === 'tool_result') {
+                setAgentSteps((prev) => [...prev, data])
+                
+                if (data.tool_name === 'create_project' && data.tool_result?.success) {
+                  const projectName = data.tool_result.project_name || 'your project'
+                  setCompletedProjectName(projectName)
+                  setShowCompletionModal(true)
+                }
+              } else if (data.type === 'progress') {
+                setAgentSteps((prev) => [...prev, data])
+              } else if (data.type === 'response') {
+                finalResponse = data.content
+              } else if (data.type === 'done') {
+                const assistantMessage: ChatMessage = {
+                  role: 'assistant',
+                  content: finalResponse || data.response,
+                  timestamp: new Date(),
+                }
+                setMessages((prev) => [...prev, assistantMessage])
+              } else if (data.type === 'error') {
+                const errorMessage: ChatMessage = {
+                  role: 'assistant',
+                  content: `Error: ${data.error}`,
+                  timestamp: new Date(),
+                }
+                setMessages((prev) => [...prev, errorMessage])
+              }
+            } catch (e) {
+              console.error('Failed to parse SSE data:', e)
+            }
+          }
         }
-
-        // Add AI response to chat
-        const aiMessage: ChatMessage = {
-          type: 'assistant',
-          content: aiContent,
-          timestamp: new Date(),
-          projectAnalysis,
-          showCreateButton,
-          confidence: analysisData.confidence,
-        }
-        setMessages((prev) => [...prev, aiMessage])
-      } else {
-        console.error('Chat error:', data.error)
       }
     } catch (error) {
-      console.error('Network error:', error)
+      console.error('Agent error:', error)
+      const errorMessage: ChatMessage = {
+        role: 'assistant',
+        content: `Network error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        timestamp: new Date(),
+      }
+      setMessages((prev) => [...prev, errorMessage])
     }
+
     setIsLoading(false)
-  }
-
-  const handleOpenCustomizationModal = (projectAnalysis: ProjectAnalysis) => {
-    // Convert to old format for modal
-    const requirements = convertAnalysisToRequirements(projectAnalysis)
-    setSelectedAnalysis(requirements)
-    setOriginalAnalysis(projectAnalysis) // Store original for enhanced generation
-    setIsModalOpen(true)
-  }
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false)
-    setSelectedAnalysis(null)
-    setOriginalAnalysis(null)
-  }
-
-  const handleGenerateFromModal = async (
-    customizedAnalysis: ProjectRequirements,
-    projectName: string,
-    _originalAnalysis?: ProjectAnalysis,
-  ) => {
-    setIsGeneratingProject(true)
-    setIsModalOpen(false)
-
-    // Add generating message to chat
-    const generatingMessage: ChatMessage = {
-      type: 'assistant',
-      content: `**Creating project "${projectName}"...** \n\nI'm analyzing your requirements and preparing your project setup.`,
-      timestamp: new Date(),
-    }
-    setMessages((prev) => [...prev, generatingMessage])
-
-    // Actually create the project in the database
-    try {
-      const projectResponse = await fetch('/api/projects', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // Include session cookies
-        body: JSON.stringify({
-          name: projectName,
-          description:
-            customizedAnalysis.description ||
-            `AI-generated ${customizedAnalysis.projectType} project`,
-          repository: '', // Optional field
-          framework: 'NEXTJS', // Default framework
-          config: {
-            aiGenerated: true,
-            projectType: customizedAnalysis.projectType,
-            complexity: customizedAnalysis.complexity,
-            features: customizedAnalysis.features,
-            template: customizedAnalysis.suggestedTemplate,
-            generatedAt: new Date().toISOString(),
-          },
-        }),
-      })
-
-      const projectData = await projectResponse.json()
-
-      if (projectData.success) {
-        // Add success message with actual project ID
-        const successMessage: ChatMessage = {
-          type: 'assistant',
-          content: `**✅ Project "${projectName}" Created Successfully!**\n\n**Project Details:**\n- **Type:** ${customizedAnalysis.projectType}\n- **Complexity:** ${customizedAnalysis.complexity}\n- **Features:** ${customizedAnalysis.features.length} features\n- **Template:** ${customizedAnalysis.suggestedTemplate}\n- **Project ID:** ${projectData.project.id}\n\n**Features Included:**\n${customizedAnalysis.features.map((f) => `• ${f}`).join('\n')}\n\n**Database Record Created:**\n• Project saved to PostgreSQL database\n• Development environment configured\n• Production environment configured\n• Available in Projects page\n\n🎉 **Your project has been created and saved!**\n\n→ **[View in Projects Page](/projects)**`,
-          timestamp: new Date(),
-        }
-        setMessages((prev) => [...prev, successMessage])
-      } else {
-        console.error('Project creation failed:', projectData)
-        throw new Error(projectData.error || projectData.details || 'Failed to create project')
-      }
-    } catch (error) {
-      console.error('Project creation error:', error)
-
-      // Handle specific authentication error
-      if (
-        error instanceof Error &&
-        (error.message.includes('401') || error.message.includes('Unauthorized'))
-      ) {
-        const authError: ChatMessage = {
-          type: 'assistant',
-          content: `**❌ Authentication Required**\n\nYou need to be signed in to create projects.\n\n→ **[Sign In](/api/auth/signin)** to continue\n\nOnce signed in, you can create and manage AI-generated projects.`,
-          timestamp: new Date(),
-        }
-        setMessages((prev) => [...prev, authError])
-      } else {
-        const errorMessage: ChatMessage = {
-          type: 'assistant',
-          content: `**❌ Project Creation Failed**\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}\n\nPlease ensure you're signed in and try again. If the issue persists, check the console for more details.`,
-          timestamp: new Date(),
-        }
-        setMessages((prev) => [...prev, errorMessage])
-      }
-    }
-
-    setIsGeneratingProject(false)
-
-    setIsGeneratingProject(false)
-  }
-
-  // Convert ProjectAnalysis to ProjectRequirements for backward compatibility
-  const convertAnalysisToRequirements = (analysis: ProjectAnalysis): ProjectRequirements => {
-    return {
-      isProjectRequest: true, // Always true since we're converting from project analysis
-      projectType: analysis.projectType,
-      description: analysis.description,
-      features: analysis.keyFeatures.map((f) => f.name),
-      complexity: analysis.complexity,
-      suggestedTemplate: analysis.recommendedTemplate?.id || 'nextjs-fullstack', // Use AI-selected template
-      confidence: 85, // Static confidence for converted analysis
-      reasoning: `Converted from AI project analysis for ${analysis.title}`, // Add reasoning
-    }
-  }
-
-  const handleQuickGenerate = async (projectAnalysis: ProjectAnalysis) => {
-    // Store original analysis and convert for backward compatibility
-    setOriginalAnalysis(projectAnalysis)
-    const requirements = convertAnalysisToRequirements(projectAnalysis)
-    const defaultProjectName = `${projectAnalysis.projectType.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}`
-    handleGenerateFromModal(requirements, defaultProjectName, projectAnalysis)
+    setAgentSteps([])
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -357,6 +196,10 @@ export default function MainContent({ className = '' }: Props) {
       handleSendMessage()
     }
   }
+
+  const currentProgress = agentSteps
+    .filter((s) => s.type === 'progress')
+    .slice(-1)[0]?.progress
 
   return (
     <section
@@ -382,28 +225,16 @@ export default function MainContent({ className = '' }: Props) {
           backgroundSize: '100% auto',
         }}
       >
-        {/* Top: General Chat icon */}
         <div className="ml-4 p-4">
           <img src={generalChatIcon.src} alt="General Chat" className="mt-4" />
         </div>
 
-        {/* Center block */}
         <div className="relative flex flex-1 flex-col items-center justify-center">
-          {/* Debug info - temporarily show state */}
-          <div className="absolute left-2 top-2 z-50 text-xs text-white/50">
-            Messages: {messages.length} | Session: {currentSessionId?.substring(0, 8)}...
-          </div>
-
-          {/* Welcome content - always visible */}
           <div className="text-[22px] font-light text-white">
-            Hey{' '}
-            <span className="font-bold">
-              {session?.user?.name || session?.user?.email || 'User'}
-            </span>
+            Hey <span className="font-bold">{session?.user?.name || session?.user?.email || 'User'}</span>
           </div>
           <div className="text-[22px] font-light text-[#FFFFFF66]">Whats on your mind today</div>
 
-          {/* Transparent chat overlay - only when messages exist */}
           {messages.length > 0 && (
             <div
               className="absolute overflow-hidden rounded-lg bg-black/20 backdrop-blur-sm"
@@ -414,42 +245,24 @@ export default function MainContent({ className = '' }: Props) {
                 bottom: '100px',
               }}
             >
-              {/* Chat messages area with internal scroll */}
               <div className="absolute inset-0 flex flex-col">
-                {/* Messages container - takes remaining space */}
                 <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4 pb-20">
                   {messages.map((message, index) => (
                     <div
                       key={index}
-                      className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                      className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
                         className={`max-w-[70%] rounded-lg px-3 py-2 ${
-                          message.type === 'user'
+                          message.role === 'user'
                             ? 'bg-[#10F3FE]/90 text-black'
                             : 'bg-black/40 text-white backdrop-blur-sm'
                         }`}
                       >
                         <div className="whitespace-pre-wrap text-sm">{message.content}</div>
-
-                        {/* Show Enhanced Project Analysis for project requests */}
-                        {message.showCreateButton && message.projectAnalysis && (
-                          <div className="mt-4 border-t border-white/20 pt-4">
-                            <ProjectAnalysisCard
-                              analysis={message.projectAnalysis}
-                              confidence={message.confidence}
-                              onCustomize={() =>
-                                handleOpenCustomizationModal(message.projectAnalysis)
-                              }
-                              onGenerateNow={() => handleQuickGenerate(message.projectAnalysis)}
-                              isGenerating={isGeneratingProject}
-                            />
-                          </div>
-                        )}
-
                         <div
                           className={`mt-1 text-xs opacity-70 ${
-                            message.type === 'user' ? 'text-black/70' : 'text-white/70'
+                            message.role === 'user' ? 'text-black/70' : 'text-white/70'
                           }`}
                         >
                           {message.timestamp.toLocaleTimeString()}
@@ -457,20 +270,47 @@ export default function MainContent({ className = '' }: Props) {
                       </div>
                     </div>
                   ))}
+
                   {isLoading && (
                     <div className="flex justify-start">
-                      <div className="rounded-lg bg-black/40 px-3 py-2 text-white backdrop-blur-sm">
-                        <div className="flex items-center space-x-2">
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#10F3FE]/30 border-t-[#10F3FE]"></div>
-                          <span className="text-sm">AI is thinking...</span>
+                      <div className="max-w-[70%] rounded-lg bg-black/40 px-3 py-2 text-white backdrop-blur-sm">
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#10F3FE]/30 border-t-[#10F3FE]"></div>
+                            <span className="text-sm">AI Agent working...</span>
+                          </div>
+
+                          {agentSteps.slice(-3).map((step, index) => (
+                            <div key={index} className="text-xs text-white/70">
+                              {step.type === 'tool_call' && `🔧 ${step.content}`}
+                              {step.type === 'tool_result' && `✓ ${step.content}`}
+                              {step.type === 'progress' && step.progress && (
+                                <div className="mt-1">
+                                  <div className="mb-1 text-xs">{step.content}</div>
+                                  <div className="h-2 w-48 overflow-hidden rounded-full bg-white/10">
+                                    <div
+                                      className="h-full bg-[#10F3FE] transition-all"
+                                      style={{ width: `${step.progress.percentage}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+
+                          {currentProgress && (
+                            <div className="text-xs text-[#10F3FE]">
+                              Progress: {currentProgress.percentage}%
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
                   )}
+
                   <div ref={messagesEndRef} />
                 </div>
 
-                {/* Chat input - absolutely positioned at bottom */}
                 <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 bg-black/20 p-3 backdrop-blur-sm">
                   <CutoutShell>
                     <div className="relative w-full" style={{ height: '60px' }}>
@@ -482,9 +322,7 @@ export default function MainContent({ className = '' }: Props) {
                         />
                         <input
                           type="text"
-                          placeholder={
-                            isLoading ? 'AI is thinking...' : 'Continue the conversation...'
-                          }
+                          placeholder={isLoading ? 'AI is working...' : 'Continue the conversation...'}
                           value={inputValue}
                           onChange={(e) => setInputValue(e.target.value)}
                           onKeyDown={handleKeyPress}
@@ -502,7 +340,6 @@ export default function MainContent({ className = '' }: Props) {
                             style={{ width: '60px', height: '60px' }}
                             onClick={handleSendMessage}
                             disabled={isLoading}
-                            aria-label="Send message"
                           >
                             {isLoading ? (
                               <div className="ml-1 mt-1 h-4 w-4 animate-spin rounded-full border-2 border-[#10F3FE]/30 border-t-[#10F3FE]"></div>
@@ -517,15 +354,8 @@ export default function MainContent({ className = '' }: Props) {
                 </div>
               </div>
 
-              {/* Clear button */}
               <button
-                onClick={() => {
-                  setMessages([])
-                  if (typeof window !== 'undefined' && currentSessionId) {
-                    const storageKey = `nexa-chat-messages-${currentSessionId}`
-                    localStorage.removeItem(storageKey)
-                  }
-                }}
+                onClick={() => setMessages([])}
                 className="absolute right-2 top-2 rounded bg-black/40 px-2 py-1 text-xs text-white backdrop-blur-sm transition hover:bg-black/60"
               >
                 Clear
@@ -533,20 +363,12 @@ export default function MainContent({ className = '' }: Props) {
             </div>
           )}
 
-          {/* Search bar - only show when no messages */}
           {messages.length === 0 && (
             <div className="mt-8">
               <CutoutShell>
                 <div className="relative" style={{ width: '600px', height: '65px' }}>
                   <div className="flex w-full items-center">
-                    {/* Left search icon */}
-                    <img
-                      src={searchIcon.src}
-                      alt="Search"
-                      className="mb-1 ml-3 h-4 w-4 opacity-70"
-                    />
-
-                    {/* Input */}
+                    <img src={searchIcon.src} alt="Search" className="mb-1 ml-3 h-4 w-4 opacity-70" />
                     <input
                       type="text"
                       placeholder={isLoading ? 'AI is thinking...' : 'Ask anything'}
@@ -556,25 +378,17 @@ export default function MainContent({ className = '' }: Props) {
                       disabled={isLoading}
                       className="mb-1 flex-1 border-none bg-transparent px-3 text-[14px] text-white outline-none placeholder:text-white focus:shadow-none focus:outline-none focus:ring-0 disabled:opacity-50"
                     />
-
-                    {/* Mic */}
                     <div className="mr-1 rounded-full p-2 transition hover:bg-white/10">
                       <img src={micIcon.src} alt="Mic" />
                     </div>
-
-                    {/* Send */}
                     <CutoutShell className="-mt-[2px]">
                       <button
                         className={`cursor-pointer p-4 transition hover:bg-cyan-400/30 ${
                           isLoading ? 'cursor-not-allowed opacity-50' : ''
                         }`}
-                        style={{
-                          width: '70px',
-                          height: '65px',
-                        }}
+                        style={{ width: '70px', height: '65px' }}
                         onClick={handleSendMessage}
                         disabled={isLoading}
-                        aria-label="Send message"
                       >
                         {isLoading ? (
                           <div className="ml-1 mt-1 animate-spin text-lg text-[#10F3FE]">⟳</div>
@@ -590,36 +404,29 @@ export default function MainContent({ className = '' }: Props) {
           )}
         </div>
       </div>
+
       <div className="absolute left-[40%] top-1 z-50 flex gap-4">
         <CutoutShell>
-          <div
-            className="flex items-center gap-2 px-4 pb-2"
-            style={{ width: '200px', height: '65px' }}
-          >
+          <div className="flex items-center gap-2 px-4 pb-2" style={{ width: '200px', height: '65px' }}>
             <img src={chatIcon.src} alt="General Chat" className="mt-2" />
             <span className="text-base text-white">General Chat</span>
           </div>
         </CutoutShell>
         <CutoutShell>
-          <div
-            className="flex items-center gap-2 px-4 pb-2"
-            style={{ width: '200px', height: '65px' }}
-          >
+          <div className="flex items-center gap-2 px-4 pb-2" style={{ width: '200px', height: '65px' }}>
             <img src={canvasIcon.src} alt="Canvas" className="mt-2" />
             <span className="text-base text-white">Canvas</span>
             <img src={downChevron.src} alt="Dropdown" className="absolute right-4 mt-2" />
           </div>
         </CutoutShell>
         <CutoutShell>
-          <div
-            className="flex items-center gap-2 px-4 pb-2"
-            style={{ width: '200px', height: '65px' }}
-          >
+          <div className="flex items-center gap-2 px-4 pb-2" style={{ width: '200px', height: '65px' }}>
             <img src={watchIcon.src} alt="Watch Live" className="mt-2" />
             <span className="text-base text-white">Watch Live</span>
           </div>
         </CutoutShell>
       </div>
+
       <img
         src={borderDesignLeft.src}
         alt="Border Decoration"
@@ -631,15 +438,30 @@ export default function MainContent({ className = '' }: Props) {
         className="pointer-events-none absolute bottom-40 right-0 z-50 translate-x-1/2 -rotate-90 select-none"
       />
 
-      {/* Project Generation Modal */}
-      {selectedAnalysis && (
-        <ProjectGenerationModal
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          analysis={selectedAnalysis}
-          onGenerate={handleGenerateFromModal}
-          isGenerating={isGeneratingProject}
-        />
+      {showCompletionModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="w-[500px] rounded-lg bg-gradient-to-br from-[#10F3FE]/20 to-[#002B2F] p-8 text-center shadow-2xl">
+            <div className="mb-4 text-6xl">🎉</div>
+            <h2 className="mb-2 text-3xl font-bold text-white">Project Created!</h2>
+            <p className="mb-6 text-lg text-white/80">
+              {completedProjectName} has been successfully generated
+            </p>
+            <div className="flex gap-3 justify-center">
+              <a
+                href="/workspaces"
+                className="rounded-lg bg-[#10F3FE] px-6 py-3 font-semibold text-black transition hover:bg-[#10F3FE]/80"
+              >
+                View in Workspaces
+              </a>
+              <button
+                onClick={() => setShowCompletionModal(false)}
+                className="rounded-lg border border-white/30 px-6 py-3 font-semibold text-white transition hover:bg-white/10"
+              >
+                Continue Chatting
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </section>
   )

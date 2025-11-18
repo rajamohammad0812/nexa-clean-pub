@@ -40,3 +40,15 @@
   opacity: 1;
   transform: translateY(-50%) scale(1);
 }
+
+/* Active state */
+.sidebar-item.active {
+  background: linear-gradient(90deg, rgba(16, 243, 254, 0.15) 0%, transparent 100%);
+  border-left: 3px solid #10F3FE;
+  opacity: 1;
+  color: #10F3FE;
+}
+
+.sidebar-item.active:hover {
+  background: linear-gradient(90deg, rgba(16, 243, 254, 0.25) 0%, transparent 100%);
+}

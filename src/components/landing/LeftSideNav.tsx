@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import addNewIcon from '@/components/assets/img/LeftSideNav/addNew.svg'
 import searchIcon from '@/components/assets/img/LeftSideNav/search.svg'
 import homeIcon from '@/components/assets/img/LeftSideNav/home.svg'
@@ -16,6 +17,7 @@ type Props = {
 }
 
 export default function LeftSideNav({ className = '' }: Props) {
+  const pathname = usePathname()
   const clipPath =
     'polygon(0 0, calc(100% - 25px) 0, 100% 25px, 100% 100%, 25px 100%, 0 calc(100% - 25px))'
 
@@ -71,24 +73,29 @@ export default function LeftSideNav({ className = '' }: Props) {
 
         {/* Navigation items */}
         <nav className="flex-1 space-y-1 pt-4">
-          <Link href="/" className="sidebar-item">
+          <Link href="/" className={`sidebar-item ${pathname === '/' ? 'active' : ''}`}>
             <img src={homeIcon.src} alt="Home" className="h-4 w-4" />
             Home
             <img src={hoverDesignIcon.src} alt="" className="hover-icon" />
           </Link>
-          <Link href="/dashboard" className="sidebar-item">
+          <Link href="/dashboard" className={`sidebar-item ${pathname === '/dashboard' ? 'active' : ''}`}>
             <img src={dashboardIcon.src} alt="Dashboard" className="h-4 w-4" />
             Dashboard
             <img src={hoverDesignIcon.src} alt="" className="hover-icon" />
           </Link>
-          <Link href="/analytics" className="sidebar-item">
+          <Link href="/analytics" className={`sidebar-item ${pathname === '/analytics' ? 'active' : ''}`}>
             <img src={analyticsIcon.src} alt="Analytics" className="h-4 w-4" />
             Analytics
             <img src={hoverDesignIcon.src} alt="" className="hover-icon" />
           </Link>
-          <Link href="/projects" className="sidebar-item">
+          <Link href="/projects" className={`sidebar-item ${pathname === '/projects' ? 'active' : ''}`}>
             <img src={projectsIcon.src} alt="Projects" className="h-4 w-4" />
             Projects
+            <img src={hoverDesignIcon.src} alt="" className="hover-icon" />
+          </Link>
+          <Link href="/workspaces" className={`sidebar-item ${pathname === '/workspaces' ? 'active' : ''}`}>
+            <img src={projectsIcon.src} alt="Workspaces" className="h-4 w-4" />
+            Workspaces
             <img src={hoverDesignIcon.src} alt="" className="hover-icon" />
           </Link>
         </nav>
