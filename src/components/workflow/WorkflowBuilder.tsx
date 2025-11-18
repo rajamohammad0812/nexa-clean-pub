@@ -522,7 +522,7 @@ function renderStepSpecificConfig(
           <div>
             <Label>URL</Label>
             <Input
-              value={config.url || ''}
+              value={String(config.url || '')}
               onChange={(e) => updateConfig('url', e.target.value)}
               placeholder="https://api.example.com/endpoint"
               className="mt-1"
@@ -531,7 +531,7 @@ function renderStepSpecificConfig(
           <div>
             <Label>Method</Label>
             <Select
-              value={config.method || 'GET'}
+              value={String(config.method || 'GET')}
               onValueChange={(value) => updateConfig('method', value)}
             >
               <SelectTrigger className="mt-1">
@@ -572,7 +572,7 @@ function renderStepSpecificConfig(
           <Input
             type="number"
             min="0"
-            value={config.duration || 1000}
+            value={Number(config.duration || 1000)}
             onChange={(e) => updateConfig('duration', parseInt(e.target.value))}
             className="mt-1"
           />
@@ -585,7 +585,7 @@ function renderStepSpecificConfig(
           <div>
             <Label>To</Label>
             <Input
-              value={config.to || ''}
+              value={String(config.to || '')}
               onChange={(e) => updateConfig('to', e.target.value)}
               placeholder="recipient@example.com"
               className="mt-1"
@@ -594,7 +594,7 @@ function renderStepSpecificConfig(
           <div>
             <Label>Subject</Label>
             <Input
-              value={config.subject || ''}
+              value={String(config.subject || '')}
               onChange={(e) => updateConfig('subject', e.target.value)}
               placeholder="Email subject"
               className="mt-1"
@@ -603,7 +603,7 @@ function renderStepSpecificConfig(
           <div>
             <Label>Body</Label>
             <Textarea
-              value={config.body || ''}
+              value={String(config.body || '')}
               onChange={(e) => updateConfig('body', e.target.value)}
               placeholder="Email content..."
               rows={4}
