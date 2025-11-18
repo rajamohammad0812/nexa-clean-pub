@@ -80,6 +80,7 @@ export default function MainContent({ className = '' }: Props) {
   const [completedProjectName, setCompletedProjectName] = useState('')
   const [completedProjectImage, setCompletedProjectImage] = useState('')
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [serverRunning, setServerRunning] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -238,20 +239,27 @@ export default function MainContent({ className = '' }: Props) {
 
   const handleRunApp = async () => {
     try {
+      const action = serverRunning ? 'stop' : 'start'
       const response = await fetch('/api/workspace/dev-server', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           project: completedProjectName,
-          action: 'start',
+          action,
         }),
       })
       const data = await response.json()
       if (data.success) {
-        alert(`Development server started! Your app is running.`)
+        setServerRunning(!serverRunning)
+        if (action === 'start') {
+          alert(`Development server started! Your app is running at http://localhost:3000`)
+        } else {
+          alert('Development server stopped.')
+        }
       }
     } catch (error) {
-      console.error('Failed to start dev server:', error)
+      console.error('Failed to manage dev server:', error)
+      alert('Failed to manage server. See console for details.')
     }
   }
 
@@ -580,9 +588,13 @@ export default function MainContent({ className = '' }: Props) {
               </button>
               <button
                 onClick={handleRunApp}
-                className="flex-1 rounded-lg bg-[#10F3FE] px-6 py-3 font-semibold text-black transition hover:bg-[#10F3FE]/80"
+                className={`flex-1 rounded-lg px-6 py-3 font-semibold transition ${
+                  serverRunning
+                    ? 'border border-red-500 bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                    : 'bg-[#10F3FE] text-black hover:bg-[#10F3FE]/80'
+                }`}
               >
-                ▶️ Run App
+                {serverRunning ? '⏹️ Stop Server' : '▶️ Run App'}
               </button>
             </div>
 
