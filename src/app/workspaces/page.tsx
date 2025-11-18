@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { AuthenticatedLayout } from '@/components/layout/AuthenticatedLayout'
 
 interface ProjectMetadata {
   name: string
@@ -145,16 +146,17 @@ export default function WorkspacesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#002B2F] p-8">
-      <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-4xl font-bold text-white">My Workspaces</h1>
-        <button
-          onClick={() => router.push('/')}
-          className="rounded-lg bg-[#10F3FE] px-6 py-2 font-semibold text-black transition hover:bg-[#10F3FE]/80"
-        >
-          Back to Chat
-        </button>
-      </div>
+    <AuthenticatedLayout>
+      <div className="h-full overflow-y-auto bg-[#002B2F] p-8">
+        <div className="mb-8 flex items-center justify-between">
+          <h1 className="text-4xl font-bold text-white">My Workspaces</h1>
+          <button
+            onClick={() => router.push('/')}
+            className="rounded-lg bg-[#10F3FE] px-6 py-2 font-semibold text-black transition hover:bg-[#10F3FE]/80"
+          >
+            Back to Chat
+          </button>
+        </div>
 
       {projects.length === 0 ? (
         <div className="rounded-lg border border-white/20 bg-black/20 p-12 text-center backdrop-blur-sm">
@@ -287,6 +289,7 @@ export default function WorkspacesPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </AuthenticatedLayout>
   )
 }
