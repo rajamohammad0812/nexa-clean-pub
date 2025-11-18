@@ -9,6 +9,7 @@ interface ProjectMetadata {
   description: string
   createdAt: string
   techStack: string[]
+  imageUrl?: string
 }
 
 export default function WorkspacesPage() {
@@ -175,10 +176,23 @@ export default function WorkspacesPage() {
               key={project.name}
               className="group relative overflow-hidden rounded-lg border border-[#10F3FE]/30 bg-gradient-to-br from-black/40 to-black/20 p-6 backdrop-blur-sm transition hover:border-[#10F3FE] hover:shadow-lg hover:shadow-[#10F3FE]/20"
             >
-              <div className="mb-4">
+            <div className="mb-4 flex items-start gap-4">
+              {project.imageUrl ? (
+                <img
+                  src={project.imageUrl}
+                  alt={project.displayName}
+                  className="h-16 w-16 rounded-lg object-cover border-2 border-[#10F3FE]/50"
+                />
+              ) : (
+                <div className="flex h-16 w-16 items-center justify-center rounded-lg border-2 border-[#10F3FE]/50 bg-[#10F3FE]/10 text-2xl">
+                  🤖
+                </div>
+              )}
+              <div className="flex-1">
                 <h2 className="mb-2 text-2xl font-bold text-white">{project.displayName}</h2>
                 <p className="text-sm text-white/60">{project.description || 'No description'}</p>
               </div>
+            </div>
 
               <div className="mb-4 flex flex-wrap gap-2">
                 {project.techStack.map((tech) => (

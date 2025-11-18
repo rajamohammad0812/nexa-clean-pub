@@ -11,6 +11,7 @@ interface ProjectMetadata {
   description: string
   createdAt: string
   techStack: string[]
+  imageUrl?: string
 }
 
 interface MetadataStore {
@@ -36,7 +37,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { projectName, displayName, description, techStack } = body
+    const { projectName, displayName, description, techStack, imageUrl } = body
 
     if (!projectName) {
       return NextResponse.json(
@@ -57,6 +58,7 @@ export async function POST(request: NextRequest) {
       description: description || '',
       createdAt: new Date().toISOString(),
       techStack: techStack || [],
+      imageUrl: imageUrl || '',
     }
 
     if (!fs.existsSync(WORKSPACE_ROOT)) {

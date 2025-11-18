@@ -78,7 +78,10 @@ export default function MainContent({ className = '' }: Props) {
   const [agentSteps, setAgentSteps] = useState<AgentStep[]>([])
   const [showCompletionModal, setShowCompletionModal] = useState(false)
   const [completedProjectName, setCompletedProjectName] = useState('')
+  const [completedProjectImage, setCompletedProjectImage] = useState('')
+  const [uploadingImage, setUploadingImage] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const clipPath =
     'polygon(25px 0, 35% 0, calc(35% + 25px) 25px, calc(35% + 25px) 70px, 39% 90px, 97.5% 90px, 100% 110px, 100% calc(100% - 25px), calc(100% - 25px) 100%, 0 100%, 0 25px)'
@@ -148,7 +151,9 @@ export default function MainContent({ className = '' }: Props) {
                 
                 if (data.tool_name === 'create_project' && data.tool_result?.success) {
                   const projectName = data.tool_result.project_name || 'your project'
+                  const imageUrl = data.tool_result.imageUrl || ''
                   setCompletedProjectName(projectName)
+                  setCompletedProjectImage(imageUrl)
                   setShowCompletionModal(true)
                 }
               } else if (data.type === 'progress') {
@@ -194,6 +199,74 @@ export default function MainContent({ className = '' }: Props) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSendMessage()
+    }
+  }
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file || !completedProjectName) return
+
+    setUploadingImage(true)
+    try {
+      const formData = new FormData()
+      formData.append('image', file)
+      formData.append('projectName', completedProjectName)
+
+      const response = await fetch('/api/workspace/upload-image', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        setCompletedProjectImage(data.imageUrl)
+        // Update metadata with image
+        await fetch('/api/workspace/metadata', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            projectName: completedProjectName,
+            imageUrl: data.imageUrl,
+          }),
+        })
+      }
+    } catch (error) {
+      console.error('Image upload failed:', error)
+    }
+    setUploadingImage(false)
+  }
+
+  const handleRunApp = async () => {
+    try {
+      const response = await fetch('/api/workspace/dev-server', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project: completedProjectName,
+          action: 'start',
+        }),
+      })
+      const data = await response.json()
+      if (data.success) {
+        alert(`Development server started! Your app is running.`)
+      }
+    } catch (error) {
+      console.error('Failed to start dev server:', error)
+    }
+  }
+
+  const handleDownloadApp = async () => {
+    try {
+      const response = await fetch(`/api/workspace/download?project=${completedProjectName}`)
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${completedProjectName}.zip`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Download failed:', error)
     }
   }
 
@@ -277,7 +350,7 @@ export default function MainContent({ className = '' }: Props) {
                         <div className="space-y-2">
                           <div className="flex items-center space-x-2">
                             <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#10F3FE]/30 border-t-[#10F3FE]"></div>
-                            <span className="text-sm">AI Agent working...</span>
+                            <span className="text-sm font-semibold">AI Agents are generating/streaming project...</span>
                           </div>
 
                           {agentSteps.slice(-3).map((step, index) => (
@@ -285,11 +358,14 @@ export default function MainContent({ className = '' }: Props) {
                               {step.type === 'tool_call' && `🔧 ${step.content}`}
                               {step.type === 'tool_result' && `✓ ${step.content}`}
                               {step.type === 'progress' && step.progress && (
-                                <div className="mt-1">
-                                  <div className="mb-1 text-xs">{step.content}</div>
-                                  <div className="h-2 w-48 overflow-hidden rounded-full bg-white/10">
+                                <div className="mt-2">
+                                  <div className="mb-2 flex items-center justify-between">
+                                    <span className="text-xs font-medium text-white">{step.content}</span>
+                                    <span className="text-xs font-bold text-[#10F3FE]">{step.progress.percentage}%</span>
+                                  </div>
+                                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/20">
                                     <div
-                                      className="h-full bg-[#10F3FE] transition-all"
+                                      className="h-full bg-gradient-to-r from-[#10F3FE] to-cyan-400 transition-all duration-300 ease-out"
                                       style={{ width: `${step.progress.percentage}%` }}
                                     />
                                   </div>
@@ -299,8 +375,17 @@ export default function MainContent({ className = '' }: Props) {
                           ))}
 
                           {currentProgress && (
-                            <div className="text-xs text-[#10F3FE]">
-                              Progress: {currentProgress.percentage}%
+                            <div className="mt-2 rounded border border-[#10F3FE]/30 bg-[#10F3FE]/10 px-3 py-2">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-medium text-white">Overall Progress</span>
+                                <span className="font-bold text-[#10F3FE]">{currentProgress.percentage}%</span>
+                              </div>
+                              <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-white/20">
+                                <div
+                                  className="h-full bg-[#10F3FE] transition-all duration-300"
+                                  style={{ width: `${currentProgress.percentage}%` }}
+                                />
+                              </div>
                             </div>
                           )}
                         </div>
@@ -440,22 +525,78 @@ export default function MainContent({ className = '' }: Props) {
 
       {showCompletionModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="w-[500px] rounded-lg bg-gradient-to-br from-[#10F3FE]/20 to-[#002B2F] p-8 text-center shadow-2xl">
-            <div className="mb-4 text-6xl">🎉</div>
-            <h2 className="mb-2 text-3xl font-bold text-white">Project Created!</h2>
-            <p className="mb-6 text-lg text-white/80">
+          <div className="w-[600px] rounded-lg bg-gradient-to-br from-[#10F3FE]/20 to-[#002B2F] p-8 shadow-2xl">
+            <div className="mb-4 text-center text-6xl">🎉</div>
+            <h2 className="mb-2 text-center text-3xl font-bold text-white">Your Project is Complete!</h2>
+            <p className="mb-6 text-center text-lg text-white/80">
               {completedProjectName} has been successfully generated
             </p>
+
+            {/* Image Upload Section */}
+            <div className="mb-6 rounded-lg border border-white/20 bg-black/20 p-4">
+              <p className="mb-3 text-center text-sm text-white/80">Would you like to upload an app logo?</p>
+              {completedProjectImage ? (
+                <div className="flex items-center justify-center gap-4">
+                  <img 
+                    src={completedProjectImage} 
+                    alt="App logo" 
+                    className="h-20 w-20 rounded-lg object-cover border-2 border-[#10F3FE]"
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-sm text-[#10F3FE] hover:underline"
+                  >
+                    Change Image
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingImage}
+                  className="mx-auto flex items-center gap-2 rounded-lg border border-[#10F3FE] px-4 py-2 text-sm font-semibold text-[#10F3FE] transition hover:bg-[#10F3FE]/10 disabled:opacity-50"
+                >
+                  {uploadingImage ? 'Uploading...' : '📸 Upload Image'}
+                </button>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+            </div>
+
+            {/* Action Question */}
+            <p className="mb-4 text-center text-white">What would you like to do?</p>
+            
+            {/* Action Buttons */}
+            <div className="flex gap-3 justify-center mb-4">
+              <button
+                onClick={handleDownloadApp}
+                className="flex-1 rounded-lg border border-[#10F3FE] px-6 py-3 font-semibold text-[#10F3FE] transition hover:bg-[#10F3FE]/10"
+              >
+                📥 Download App
+              </button>
+              <button
+                onClick={handleRunApp}
+                className="flex-1 rounded-lg bg-[#10F3FE] px-6 py-3 font-semibold text-black transition hover:bg-[#10F3FE]/80"
+              >
+                ▶️ Run App
+              </button>
+            </div>
+
+            {/* Secondary Actions */}
             <div className="flex gap-3 justify-center">
               <a
                 href="/workspaces"
-                className="rounded-lg bg-[#10F3FE] px-6 py-3 font-semibold text-black transition hover:bg-[#10F3FE]/80"
+                className="text-sm text-white/70 hover:text-white hover:underline"
               >
                 View in Workspaces
               </a>
               <button
                 onClick={() => setShowCompletionModal(false)}
-                className="rounded-lg border border-white/30 px-6 py-3 font-semibold text-white transition hover:bg-white/10"
+                className="text-sm text-white/70 hover:text-white hover:underline"
               >
                 Continue Chatting
               </button>
