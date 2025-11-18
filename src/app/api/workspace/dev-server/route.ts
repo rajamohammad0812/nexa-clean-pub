@@ -73,18 +73,21 @@ export async function POST(request: NextRequest) {
       const serverProcess = runningServers.get(project)
 
       if (!serverProcess) {
-        return NextResponse.json(
-          { error: 'No server running for this project' },
-          { status: 400 }
-        )
+        // Server not running, but return success anyway
+        return NextResponse.json({
+          success: true,
+          message: 'Server was not running',
+          wasRunning: false,
+        })
       }
 
-      serverProcess.kill()
+      serverProcess.kill('SIGTERM')
       runningServers.delete(project)
 
       return NextResponse.json({
         success: true,
         message: 'Development server stopped',
+        wasRunning: true,
       })
     } else if (action === 'status') {
       const isRunning = runningServers.has(project)

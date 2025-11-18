@@ -239,7 +239,21 @@ export default function MainContent({ className = '' }: Props) {
 
   const handleRunApp = async () => {
     try {
-      const action = serverRunning ? 'stop' : 'start'
+      // First check current status
+      const statusRes = await fetch('/api/workspace/dev-server', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project: completedProjectName,
+          action: 'status',
+        }),
+      })
+      const statusData = await statusRes.json()
+      const actuallyRunning = statusData.running
+      
+      // Determine action based on actual server state
+      const action = actuallyRunning ? 'stop' : 'start'
+      
       const response = await fetch('/api/workspace/dev-server', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -249,17 +263,29 @@ export default function MainContent({ className = '' }: Props) {
         }),
       })
       const data = await response.json()
+      
       if (data.success) {
-        setServerRunning(!serverRunning)
+        setServerRunning(action === 'start')
         if (action === 'start') {
-          alert(`Development server started! Your app is running at http://localhost:3000`)
+          alert(`✅ Development server started!\n\nYour app is running.\nCheck the server terminal for the URL.`)
         } else {
-          alert('Development server stopped.')
+          alert('✅ Development server stopped.')
+        }
+      } else {
+        // Handle error responses
+        if (data.error?.includes('already running')) {
+          setServerRunning(true)
+          alert('Server is already running!')
+        } else if (data.error?.includes('No server running')) {
+          setServerRunning(false)
+          alert('No server is running for this project.')
+        } else {
+          alert(`Error: ${data.error || 'Failed to manage server'}`)
         }
       }
     } catch (error) {
       console.error('Failed to manage dev server:', error)
-      alert('Failed to manage server. See console for details.')
+      alert('❌ Failed to manage server. See console for details.')
     }
   }
 
