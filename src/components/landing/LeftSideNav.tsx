@@ -88,11 +88,6 @@ export default function LeftSideNav({ className = '' }: Props) {
             Analytics
             <img src={hoverDesignIcon.src} alt="" className="hover-icon" />
           </Link>
-          <Link href="/projects" className={`sidebar-item ${pathname === '/projects' ? 'active' : ''}`}>
-            <img src={projectsIcon.src} alt="Projects" className="h-4 w-4" />
-            Projects
-            <img src={hoverDesignIcon.src} alt="" className="hover-icon" />
-          </Link>
           <Link href="/workspaces" className={`sidebar-item ${pathname === '/workspaces' ? 'active' : ''}`}>
             <img src={projectsIcon.src} alt="Workspaces" className="h-4 w-4" />
             Workspaces
