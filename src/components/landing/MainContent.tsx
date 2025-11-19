@@ -424,7 +424,7 @@ export default function MainContent({ className = '' }: Props) {
                         <div className="space-y-2">
                           <div className="flex items-center space-x-2">
                             <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#10F3FE]/30 border-t-[#10F3FE]"></div>
-                            <span className="text-sm font-semibold">AI Agents are generating/streaming project...</span>
+                            <span className="text-sm font-semibold">...</span>
                           </div>
 
                           {agentSteps.slice(-3).map((step, index) => (
