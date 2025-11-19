@@ -444,10 +444,20 @@ All paths relative to project root (generated-projects/${this.projectId}/)`,
           // Use Claude 3.5 Sonnet
           const claudeMessages = messages
             .filter(m => m.role !== 'system')
-            .map(m => ({
-              role: m.role === 'assistant' ? 'assistant' : 'user',
-              content: m.content,
-            }))
+            .filter(m => m.content && m.content.trim().length > 0) // Filter empty content
+            .map(m => {
+              // Convert tool messages to user messages for Claude
+              if (m.role === 'tool') {
+                return {
+                  role: 'user',
+                  content: `Tool result from ${m.name || 'unknown'}:\n${m.content}`,
+                }
+              }
+              return {
+                role: m.role === 'assistant' ? 'assistant' : 'user',
+                content: m.content || ' ', // Ensure content is never empty
+              }
+            })
 
           const systemPrompt = messages.find(m => m.role === 'system')?.content || ''
 
