@@ -81,8 +81,11 @@ export default function MainContent({ className = '' }: Props) {
   const [completedProjectImage, setCompletedProjectImage] = useState('')
   const [uploadingImage, setUploadingImage] = useState(false)
   const [serverRunning, setServerRunning] = useState(false)
+  const [showWatchLive, setShowWatchLive] = useState(false)
+  const [liveSteps, setLiveSteps] = useState<AgentStep[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const liveEndRef = useRef<HTMLDivElement>(null)
 
   const clipPath =
     'polygon(25px 0, 35% 0, calc(35% + 25px) 25px, calc(35% + 25px) 70px, 39% 90px, 97.5% 90px, 100% 110px, 100% calc(100% - 25px), calc(100% - 25px) 100%, 0 100%, 0 25px)'
@@ -114,6 +117,7 @@ export default function MainContent({ className = '' }: Props) {
     }
   }, [messages])
 
+  // Auto-scroll for chat
   useEffect(() => {
     if (messagesEndRef.current) {
       const chatContainer = messagesEndRef.current.closest('.overflow-y-auto')
@@ -122,6 +126,13 @@ export default function MainContent({ className = '' }: Props) {
       }
     }
   }, [messages, agentSteps])
+
+  // Auto-scroll for Watch Live panel
+  useEffect(() => {
+    if (liveEndRef.current && showWatchLive) {
+      liveEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [liveSteps, showWatchLive])
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return
@@ -172,8 +183,10 @@ export default function MainContent({ className = '' }: Props) {
 
               if (data.type === 'tool_call') {
                 setAgentSteps((prev) => [...prev, data])
+                setLiveSteps((prev) => [...prev, data])
               } else if (data.type === 'tool_result') {
                 setAgentSteps((prev) => [...prev, data])
+                setLiveSteps((prev) => [...prev, data])
                 
                 if (data.tool_name === 'create_project' && data.tool_result?.success) {
                   const projectName = data.tool_result.project_name || 'your project'
@@ -184,6 +197,7 @@ export default function MainContent({ className = '' }: Props) {
                 }
               } else if (data.type === 'progress') {
                 setAgentSteps((prev) => [...prev, data])
+                setLiveSteps((prev) => [...prev, data])
               } else if (data.type === 'response') {
                 finalResponse = data.content
               } else if (data.type === 'done') {
@@ -219,6 +233,7 @@ export default function MainContent({ className = '' }: Props) {
 
     setIsLoading(false)
     setAgentSteps([])
+    // Keep live steps for Watch Live panel
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -569,10 +584,14 @@ export default function MainContent({ className = '' }: Props) {
           </div>
         </CutoutShell>
         <CutoutShell>
-          <div className="flex items-center gap-2 px-4 pb-2" style={{ width: '200px', height: '65px' }}>
+          <button
+            onClick={() => setShowWatchLive(!showWatchLive)}
+            className="flex w-full items-center gap-2 px-4 pb-2 transition hover:bg-white/10"
+            style={{ width: '200px', height: '65px' }}
+          >
             <img src={watchIcon.src} alt="Watch Live" className="mt-2" />
             <span className="text-base text-white">Watch Live</span>
-          </div>
+          </button>
         </CutoutShell>
       </div>
 
@@ -586,6 +605,136 @@ export default function MainContent({ className = '' }: Props) {
         alt="Border Decoration"
         className="pointer-events-none absolute bottom-40 right-0 z-50 translate-x-1/2 -rotate-90 select-none"
       />
+
+      {/* Watch Live Side Panel */}
+      {showWatchLive && (
+        <div className="fixed right-0 top-0 z-[9998] h-full w-[500px] border-l border-[#10F3FE]/30 bg-[#001a1f] shadow-2xl">
+          <div className="flex h-full flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-[#10F3FE]/30 bg-black/40 p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-3 w-3 animate-pulse rounded-full bg-red-500"></div>
+                <h3 className="text-lg font-bold text-white">🔴 Live Code Generation</h3>
+              </div>
+              <button
+                onClick={() => setShowWatchLive(false)}
+                className="rounded-lg bg-white/10 px-3 py-1 text-white transition hover:bg-white/20"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {liveSteps.length === 0 ? (
+                <div className="flex h-full items-center justify-center text-white/50">
+                  <div className="text-center">
+                    <div className="mb-2 text-4xl">👀</div>
+                    <p>Waiting for AI to start generating...</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {liveSteps.map((step, index) => (
+                    <div
+                      key={index}
+                      className="rounded-lg border border-[#10F3FE]/20 bg-black/40 p-3 backdrop-blur-sm"
+                    >
+                      {/* Tool Call */}
+                      {step.type === 'tool_call' && (
+                        <div>
+                          <div className="mb-2 flex items-center gap-2">
+                            <div className="h-2 w-2 animate-pulse rounded-full bg-yellow-400"></div>
+                            <span className="text-xs font-semibold text-yellow-400">EXECUTING</span>
+                          </div>
+                          <div className="text-sm text-white">
+                            🔧 <span className="font-mono text-[#10F3FE]">{step.tool_name}</span>
+                          </div>
+                          {step.tool_args && (
+                            <div className="mt-2 rounded bg-black/60 p-2">
+                              <pre className="overflow-x-auto text-xs text-white/70">
+                                {JSON.stringify(step.tool_args, null, 2)}
+                              </pre>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Tool Result */}
+                      {step.type === 'tool_result' && (
+                        <div>
+                          <div className="mb-2 flex items-center gap-2">
+                            <div className="h-2 w-2 rounded-full bg-green-400"></div>
+                            <span className="text-xs font-semibold text-green-400">COMPLETED</span>
+                          </div>
+                          <div className="text-sm text-white">
+                            ✓ <span className="font-mono text-green-400">{step.tool_name}</span>
+                          </div>
+                          {step.tool_result?.file_path && (
+                            <div className="mt-2 text-xs text-[#10F3FE]">
+                              📄 {step.tool_result.file_path}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Progress */}
+                      {step.type === 'progress' && step.progress && (
+                        <div>
+                          <div className="mb-2 flex items-center justify-between">
+                            <span className="text-xs font-semibold text-white">{step.content}</span>
+                            <span className="text-xs font-bold text-[#10F3FE]">
+                              {step.progress.percentage}%
+                            </span>
+                          </div>
+                          <div className="h-2 overflow-hidden rounded-full bg-white/20">
+                            <div
+                              className="h-full bg-gradient-to-r from-[#10F3FE] to-cyan-400 transition-all duration-300"
+                              style={{ width: `${step.progress.percentage}%` }}
+                            />
+                          </div>
+                          <div className="mt-1 text-xs text-white/60">
+                            {step.progress.current} / {step.progress.total} files
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Timestamp */}
+                      <div className="mt-2 text-xs text-white/40">
+                        {new Date(step.timestamp).toLocaleTimeString()}
+                      </div>
+                    </div>
+                  ))}
+                  <div ref={liveEndRef} />
+                </div>
+              )}
+            </div>
+
+            {/* Footer Stats */}
+            <div className="border-t border-[#10F3FE]/30 bg-black/40 p-4">
+              <div className="flex items-center justify-between text-sm">
+                <div className="text-white/70">
+                  <span className="font-bold text-white">{liveSteps.length}</span> operations
+                </div>
+                <div className="flex items-center gap-2">
+                  {isLoading && (
+                    <>
+                      <div className="h-2 w-2 animate-pulse rounded-full bg-[#10F3FE]"></div>
+                      <span className="text-[#10F3FE]">Generating...</span>
+                    </>
+                  )}
+                  {!isLoading && liveSteps.length > 0 && (
+                    <>
+                      <div className="h-2 w-2 rounded-full bg-green-400"></div>
+                      <span className="text-green-400">Complete</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showCompletionModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm">
