@@ -106,6 +106,8 @@ export default function MainContent({ className = '' }: Props) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const chatFileInputRef = useRef<HTMLInputElement>(null)
+  const chatInputRef = useRef<HTMLInputElement>(null)
+  const initialInputRef = useRef<HTMLInputElement>(null)
   const liveEndRef = useRef<HTMLDivElement>(null)
 
   const clipPath =
@@ -154,6 +156,18 @@ export default function MainContent({ className = '' }: Props) {
       liveEndRef.current.scrollIntoView({ behavior: 'smooth' })
     }
   }, [liveSteps, showWatchLive])
+
+  // Auto-focus input when loading completes
+  useEffect(() => {
+    if (!isLoading) {
+      // Focus the appropriate input based on whether there are messages
+      if (messages.length > 0 && chatInputRef.current) {
+        chatInputRef.current.focus()
+      } else if (messages.length === 0 && initialInputRef.current) {
+        initialInputRef.current.focus()
+      }
+    }
+  }, [isLoading, messages.length])
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
@@ -582,13 +596,14 @@ export default function MainContent({ className = '' }: Props) {
                           className="mb-1 ml-3 h-4 w-4 opacity-70"
                         />
                         <input
+                          ref={chatInputRef}
                           type="text"
-                          placeholder={isLoading ? 'AI is working...' : 'Continue the conversation...'}
+                          placeholder="Continue the conversation..."
                           value={inputValue}
                           onChange={(e) => setInputValue(e.target.value)}
                           onKeyDown={handleKeyPress}
                           disabled={isLoading}
-                          className="mb-1 flex-1 border-none bg-transparent px-3 text-sm text-white placeholder:text-white focus:outline-none"
+                          className="mb-1 flex-1 border-none bg-transparent px-3 text-sm text-white placeholder:text-white focus:outline-none disabled:cursor-not-allowed"
                         />
                         <button
                           onClick={() => chatFileInputRef.current?.click()}
@@ -680,13 +695,14 @@ export default function MainContent({ className = '' }: Props) {
                   <div className="flex w-full items-center">
                     <img src={searchIcon.src} alt="Search" className="mb-1 ml-3 h-4 w-4 opacity-70" />
                     <input
+                      ref={initialInputRef}
                       type="text"
-                      placeholder={isLoading ? 'AI is thinking...' : 'Ask anything'}
+                      placeholder="Ask anything"
                       value={inputValue}
                       onChange={(e) => setInputValue(e.target.value)}
                       onKeyDown={handleKeyPress}
                       disabled={isLoading}
-                      className="mb-1 flex-1 border-none bg-transparent px-3 text-[14px] text-white outline-none placeholder:text-white focus:shadow-none focus:outline-none focus:ring-0 disabled:opacity-50"
+                      className="mb-1 flex-1 border-none bg-transparent px-3 text-[14px] text-white outline-none placeholder:text-white focus:shadow-none focus:outline-none focus:ring-0 disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                     <button
                       onClick={() => chatFileInputRef.current?.click()}
