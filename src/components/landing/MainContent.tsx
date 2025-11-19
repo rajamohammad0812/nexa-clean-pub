@@ -57,6 +57,15 @@ interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   timestamp: Date
+  attachedFiles?: UploadedFile[]
+}
+
+interface UploadedFile {
+  name: string
+  size: number
+  type: string
+  content: string
+  path: string
 }
 
 interface AgentStep {
@@ -92,8 +101,11 @@ export default function MainContent({ className = '' }: Props) {
   const [serverRunning, setServerRunning] = useState(false)
   const [showWatchLive, setShowWatchLive] = useState(false)
   const [liveSteps, setLiveSteps] = useState<AgentStep[]>([])
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
+  const [uploadingFiles, setUploadingFiles] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const chatFileInputRef = useRef<HTMLInputElement>(null)
   const liveEndRef = useRef<HTMLDivElement>(null)
 
   const clipPath =
@@ -143,16 +155,56 @@ export default function MainContent({ className = '' }: Props) {
     }
   }, [liveSteps, showWatchLive])
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (!files || files.length === 0) return
+
+    setUploadingFiles(true)
+    try {
+      const formData = new FormData()
+      Array.from(files).forEach((file) => {
+        formData.append('files', file)
+      })
+
+      const response = await fetch('/api/agent/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = await response.json()
+      if (data.success && data.files) {
+        setUploadedFiles((prev) => [...prev, ...data.files])
+      } else {
+        alert(`Upload failed: ${data.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('File upload error:', error)
+      alert('Failed to upload files. Please try again.')
+    } finally {
+      setUploadingFiles(false)
+      if (chatFileInputRef.current) {
+        chatFileInputRef.current.value = ''
+      }
+    }
+  }
+
+  const removeUploadedFile = (index: number) => {
+    setUploadedFiles((prev) => prev.filter((_, i) => i !== index))
+  }
+
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || isLoading) return
+    if ((!inputValue.trim() && uploadedFiles.length === 0) || isLoading) return
 
     const userMessage = inputValue.trim()
+    const attachedFiles = uploadedFiles
     setInputValue('')
+    setUploadedFiles([])
 
     const newMessage: ChatMessage = {
       role: 'user',
-      content: userMessage,
+      content: userMessage || 'I\'ve attached some files for you to analyze.',
       timestamp: new Date(),
+      attachedFiles: attachedFiles.length > 0 ? attachedFiles : undefined,
     }
     setMessages((prev) => [...prev, newMessage])
     setAgentSteps([])
@@ -169,6 +221,7 @@ export default function MainContent({ className = '' }: Props) {
           message: userMessage,
           projectId: 'workspace',
           conversationHistory: messages,
+          uploadedFiles: attachedFiles.length > 0 ? attachedFiles : undefined,
         }),
       })
 
@@ -416,6 +469,24 @@ export default function MainContent({ className = '' }: Props) {
                         }`}
                       >
                         <div className="whitespace-pre-wrap text-sm">{message.content}</div>
+                        {message.attachedFiles && message.attachedFiles.length > 0 && (
+                          <div className="mt-2 space-y-1 border-t border-black/20 pt-2">
+                            {message.attachedFiles.map((file, fileIndex) => (
+                              <div
+                                key={fileIndex}
+                                className={`flex items-center gap-2 rounded px-2 py-1 text-xs ${
+                                  message.role === 'user'
+                                    ? 'bg-black/10 text-black/80'
+                                    : 'bg-white/10 text-white/80'
+                                }`}
+                              >
+                                <span>📎</span>
+                                <span className="flex-1 truncate font-mono">{file.name}</span>
+                                <span className="text-xs opacity-70">({(file.size / 1024).toFixed(1)}KB)</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                         <div
                           className={`mt-1 text-xs opacity-70 ${
                             message.role === 'user' ? 'text-black/70' : 'text-white/70'
@@ -480,6 +551,28 @@ export default function MainContent({ className = '' }: Props) {
                 </div>
 
                 <div className="absolute bottom-0 left-0 right-0 border-t border-white/10 bg-black/20 p-3 backdrop-blur-sm">
+                  {/* Uploaded Files Display */}
+                  {uploadedFiles.length > 0 && (
+                    <div className="mb-2 flex flex-wrap gap-2">
+                      {uploadedFiles.map((file, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-2 rounded-lg border border-[#10F3FE]/30 bg-black/40 px-3 py-1.5 text-xs text-white"
+                        >
+                          <span className="font-mono text-[#10F3FE]">📎</span>
+                          <span className="max-w-[150px] truncate">{file.name}</span>
+                          <span className="text-white/50">({(file.size / 1024).toFixed(1)}KB)</span>
+                          <button
+                            onClick={() => removeUploadedFile(index)}
+                            className="ml-1 text-red-400 hover:text-red-300"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
                   <CutoutShell>
                     <div className="relative w-full" style={{ height: '60px' }}>
                       <div className="flex w-full items-center">
@@ -496,6 +589,28 @@ export default function MainContent({ className = '' }: Props) {
                           onKeyDown={handleKeyPress}
                           disabled={isLoading}
                           className="mb-1 flex-1 border-none bg-transparent px-3 text-sm text-white placeholder:text-white focus:outline-none"
+                        />
+                        <button
+                          onClick={() => chatFileInputRef.current?.click()}
+                          disabled={uploadingFiles || isLoading}
+                          className="mr-1 rounded-full p-2 transition hover:bg-white/10 disabled:opacity-50"
+                          title="Attach files"
+                        >
+                          {uploadingFiles ? (
+                            <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#10F3FE]/30 border-t-[#10F3FE]"></div>
+                          ) : (
+                            <svg className="h-5 w-5 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                            </svg>
+                          )}
+                        </button>
+                        <input
+                          ref={chatFileInputRef}
+                          type="file"
+                          multiple
+                          onChange={handleFileUpload}
+                          accept=".pdf,.txt,.md,.js,.jsx,.ts,.tsx,.py,.java,.c,.cpp,.html,.css,.json,.xml,.yaml,.yml,.csv,.png,.jpg,.jpeg,.gif,.svg,.webp"
+                          className="hidden"
                         />
                         <div className="mr-1 rounded-full p-2 transition hover:bg-white/10">
                           <img src={micIcon.src} alt="Mic" />
@@ -538,6 +653,28 @@ export default function MainContent({ className = '' }: Props) {
 
           {messages.length === 0 && (
             <div className="mt-8">
+              {/* Uploaded Files Display */}
+              {uploadedFiles.length > 0 && (
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {uploadedFiles.map((file, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-2 rounded-lg border border-[#10F3FE]/30 bg-black/40 px-3 py-1.5 text-xs text-white"
+                    >
+                      <span className="font-mono text-[#10F3FE]">📎</span>
+                      <span className="max-w-[150px] truncate">{file.name}</span>
+                      <span className="text-white/50">({(file.size / 1024).toFixed(1)}KB)</span>
+                      <button
+                        onClick={() => removeUploadedFile(index)}
+                        className="ml-1 text-red-400 hover:text-red-300"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
               <CutoutShell>
                 <div className="relative" style={{ width: '600px', height: '65px' }}>
                   <div className="flex w-full items-center">
@@ -551,6 +688,20 @@ export default function MainContent({ className = '' }: Props) {
                       disabled={isLoading}
                       className="mb-1 flex-1 border-none bg-transparent px-3 text-[14px] text-white outline-none placeholder:text-white focus:shadow-none focus:outline-none focus:ring-0 disabled:opacity-50"
                     />
+                    <button
+                      onClick={() => chatFileInputRef.current?.click()}
+                      disabled={uploadingFiles || isLoading}
+                      className="mr-1 rounded-full p-2 transition hover:bg-white/10 disabled:opacity-50"
+                      title="Attach files"
+                    >
+                      {uploadingFiles ? (
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#10F3FE]/30 border-t-[#10F3FE]"></div>
+                      ) : (
+                        <svg className="h-5 w-5 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                        </svg>
+                      )}
+                    </button>
                     <div className="mr-1 rounded-full p-2 transition hover:bg-white/10">
                       <img src={micIcon.src} alt="Mic" />
                     </div>

@@ -3,7 +3,7 @@ import { AgentExecutor } from '@/lib/agent/executor'
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, projectId, conversationHistory } = await request.json()
+    const { message, projectId, conversationHistory, uploadedFiles } = await request.json()
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json(
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          const result = await agent.execute(message)
+          const result = await agent.execute(message, uploadedFiles)
 
           for (const step of result.steps) {
             const eventData = JSON.stringify({

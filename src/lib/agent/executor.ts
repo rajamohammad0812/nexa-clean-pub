@@ -57,14 +57,35 @@ export class AgentExecutor {
     this.maxIterations = maxIterations // Increased for production-quality apps with many files
   }
 
-  async execute(userMessage: string): Promise<AgentExecutionResult> {
+  async execute(userMessage: string, uploadedFiles?: any[]): Promise<AgentExecutionResult> {
     const steps: AgentStep[] = []
 
     try {
+      // Build file context if files are uploaded
+      let fileContext = ''
+      if (uploadedFiles && uploadedFiles.length > 0) {
+        fileContext = `\n\n📎 USER UPLOADED FILES:\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nThe user has provided ${uploadedFiles.length} file(s) for you to analyze and use:\n\n`
+        
+        uploadedFiles.forEach((file, index) => {
+          fileContext += `File ${index + 1}: ${file.name} (${file.type}, ${(file.size / 1024).toFixed(1)}KB)\n`
+          if (file.content) {
+            fileContext += `Content:\n\`\`\`\n${file.content.substring(0, 5000)}${file.content.length > 5000 ? '\n... (truncated)' : ''}\n\`\`\`\n\n`
+          }
+        })
+        
+        fileContext += `IMPORTANT: Analyze these files carefully and use them to:\n`
+        fileContext += `1. Understand requirements (if it's a requirements doc/PDF)\n`
+        fileContext += `2. Match UI design (if it's an image/mockup)\n`
+        fileContext += `3. Use as reference code (if it's a code file)\n`
+        fileContext += `4. Extract data structure (if it's JSON/CSV)\n`
+        fileContext += `5. Follow naming conventions and patterns shown in the files\n`
+        fileContext += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`
+      }
+
       const messages: AgentMessage[] = [
         {
           role: 'system',
-          content: `You are an elite AI coding assistant like Warp/Cursor AI. Generate production-ready, industry-standard code with modern best practices.
+          content: `You are an elite AI coding assistant like Warp/Cursor AI. Generate production-ready, industry-standard code with modern best practices.${fileContext}
 
 🎯 KEY BEHAVIOR: ALWAYS CHAT FIRST, BUILD LATER
 

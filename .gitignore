@@ -50,6 +50,7 @@ next-env.d.ts
 /temp/
 /archives/
 /generated-projects/
+/uploads/
 
 # prisma generated files
 /generated/prisma
