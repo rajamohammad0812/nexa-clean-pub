@@ -786,12 +786,8 @@ export default function MainContent({ className = '' }: Props) {
       {showWatchLive && (
         <div className="absolute right-4 top-24 z-[100] w-[calc(50%-2rem)]">
           <div className="relative">
-            {/* Teal Glowing Border Effect */}
-            <div className="absolute inset-0 rounded-lg bg-[#10F3FE] opacity-50 blur-xl"></div>
-            <div className="absolute inset-0 rounded-lg border-2 border-[#10F3FE] shadow-[0_0_20px_rgba(16,243,254,0.5)]"></div>
-            
-            {/* Panel Content */}
-            <div className="relative rounded-lg border-2 border-[#10F3FE] bg-[#001a1f]/98 backdrop-blur-md" style={{ height: 'calc(100vh - 280px)' }}>
+            {/* Panel Content with Glowing Border */}
+            <div className="relative rounded-lg border-2 border-[#10F3FE] bg-[#001a1f] backdrop-blur-md shadow-[0_0_20px_rgba(16,243,254,0.6),inset_0_0_20px_rgba(16,243,254,0.1)]" style={{ height: 'calc(100vh - 280px)' }}>
               <div className="flex h-full flex-col">
                 {/* Header */}
                 <div className="flex items-center justify-between border-b-2 border-[#10F3FE]/30 bg-gradient-to-r from-[#10F3FE]/20 to-transparent p-3">
@@ -883,23 +879,33 @@ export default function MainContent({ className = '' }: Props) {
                                     ))}
                                   </div>
                                   
-                                  {/* Code Preview */}
-                                  {step.tool_args && step.tool_args.content && step.tool_name === 'write_file' && (
-                                    <details className="mt-2 group/code">
-                                      <summary className="cursor-pointer text-xs text-[#10F3FE]/70 hover:text-[#10F3FE] flex items-center gap-1">
-                                        <span className="group-open/code:rotate-90 transition-transform">▶</span>
-                                        View Code
-                                      </summary>
-                                      <div className="mt-1 max-h-[200px] overflow-auto rounded bg-black/80 p-2 border border-[#10F3FE]/20">
-                                        <pre className="text-[10px] text-white/80 font-mono leading-tight">
-                                          {step.tool_args.content.substring(0, 500)}
-                                          {step.tool_args.content.length > 500 && (
-                                            <span className="text-[#10F3FE]/50">\n... ({step.tool_args.content.length - 500} more chars)</span>
-                                          )}
-                                        </pre>
-                                      </div>
-                                    </details>
-                                  )}
+                                  {/* Code Preview - Find content from matching tool_call */}
+                                  {step.tool_name === 'write_file' && (() => {
+                                    // Find the previous tool_call for this file
+                                    const toolCallStep = liveSteps.slice(0, index).reverse().find(
+                                      s => s.type === 'tool_call' && 
+                                           s.tool_name === 'write_file' && 
+                                           s.tool_args?.file_path === step.tool_result?.file_path
+                                    )
+                                    const codeContent = toolCallStep?.tool_args?.content
+                                    
+                                    return codeContent ? (
+                                      <details className="mt-2 group/code">
+                                        <summary className="cursor-pointer text-xs text-[#10F3FE]/70 hover:text-[#10F3FE] flex items-center gap-1">
+                                          <span className="group-open/code:rotate-90 transition-transform">▶</span>
+                                          View Code ({codeContent.length} chars)
+                                        </summary>
+                                        <div className="mt-1 max-h-[200px] overflow-auto rounded bg-black/80 p-2 border border-[#10F3FE]/20">
+                                          <pre className="text-[10px] text-white/80 font-mono leading-tight whitespace-pre-wrap">
+                                            {codeContent.substring(0, 1000)}
+                                            {codeContent.length > 1000 && (
+                                              <span className="text-[#10F3FE]/50">\n\n... ({codeContent.length - 1000} more chars)</span>
+                                            )}
+                                          </pre>
+                                        </div>
+                                      </details>
+                                    ) : null
+                                  })()}
                                 </div>
                               )}
                               
