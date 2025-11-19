@@ -449,7 +449,34 @@ All paths relative to project root (generated-projects/${this.projectId}/)`,
             }
           })
 
+        // Ensure messages alternate user/assistant
+        const alternatingMessages = []
+        let lastRole = null
+        for (const msg of claudeMessages) {
+          if (msg.role === lastRole) {
+            // Combine consecutive messages of same role
+            if (alternatingMessages.length > 0) {
+              alternatingMessages[alternatingMessages.length - 1].content += '\n\n' + msg.content
+            }
+          } else {
+            alternatingMessages.push(msg)
+            lastRole = msg.role
+          }
+        }
+
+        // Ensure first message is from user
+        if (alternatingMessages.length > 0 && alternatingMessages[0].role !== 'user') {
+          alternatingMessages.unshift({ role: 'user', content: userMessage })
+        }
+
         const systemPrompt = messages.find(m => m.role === 'system')?.content || ''
+
+        console.log('Sending to Claude:', {
+          messageCount: alternatingMessages.length,
+          systemPromptLength: systemPrompt.length,
+          firstMessageRole: alternatingMessages[0]?.role,
+          lastMessageRole: alternatingMessages[alternatingMessages.length - 1]?.role,
+        })
 
         // Call Claude API
         const response = await anthropic.messages.create({
@@ -457,7 +484,7 @@ All paths relative to project root (generated-projects/${this.projectId}/)`,
           max_tokens: 16384, // Increased for longer, more complete code
           temperature: 0.2, // Lower for more focused, production-quality code
           system: systemPrompt,
-          messages: claudeMessages as any,
+          messages: alternatingMessages as any,
           tools: TOOL_DEFINITIONS.map(tool => ({
             name: tool.function.name,
             description: tool.function.description,
