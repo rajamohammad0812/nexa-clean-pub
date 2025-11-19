@@ -150,7 +150,7 @@ All paths relative to project root (generated-projects/${this.projectId}/)`,
           const systemPrompt = messages.find(m => m.role === 'system')?.content || ''
 
           const response = await anthropic.messages.create({
-            model: 'claude-3-sonnet-20240229',
+            model: 'claude-sonnet-4-5-20250929',
             max_tokens: 8192,
             temperature: 0.3,
             system: systemPrompt,
