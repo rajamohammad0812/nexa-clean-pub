@@ -3,7 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { AgentTools, TOOL_DEFINITIONS, ToolResult } from './tools'
 
 // Choose your AI model: 'claude' or 'openai'
-const AI_PROVIDER = process.env.AI_PROVIDER || 'claude' // Default to Claude
+const AI_PROVIDER = process.env.AI_PROVIDER || 'openai' // Default to OpenAI (Claude available as backup)
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
