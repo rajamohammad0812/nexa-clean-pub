@@ -1,14 +1,7 @@
-import OpenAI from 'openai'
 import Anthropic from '@anthropic-ai/sdk'
 import { AgentTools, TOOL_DEFINITIONS, ToolResult } from './tools'
 
-// Choose your AI model: 'claude' or 'openai'
-const AI_PROVIDER = process.env.AI_PROVIDER || 'openai' // Default to OpenAI (Claude available as backup)
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
-
+// Using Claude Sonnet 4.5 as the AI provider
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 })
@@ -438,70 +431,55 @@ All paths relative to project root (generated-projects/${this.projectId}/)`,
       while (!finished && iterations < this.maxIterations) {
         iterations++
 
-        let assistantMessage: any
-
-        if (AI_PROVIDER === 'claude') {
-          // Use Claude 3.5 Sonnet
-          const claudeMessages = messages
-            .filter(m => m.role !== 'system')
-            .filter(m => m.content && m.content.trim().length > 0) // Filter empty content
-            .map(m => {
-              // Convert tool messages to user messages for Claude
-              if (m.role === 'tool') {
-                return {
-                  role: 'user',
-                  content: `Tool result from ${m.name || 'unknown'}:\n${m.content}`,
-                }
-              }
+        // Prepare messages for Claude API
+        const claudeMessages = messages
+          .filter(m => m.role !== 'system')
+          .filter(m => m.content && m.content.trim().length > 0) // Filter empty content
+          .map(m => {
+            // Convert tool messages to user messages for Claude
+            if (m.role === 'tool') {
               return {
-                role: m.role === 'assistant' ? 'assistant' : 'user',
-                content: m.content || ' ', // Ensure content is never empty
+                role: 'user',
+                content: `Tool result from ${m.name || 'unknown'}:\n${m.content}`,
               }
-            })
-
-          const systemPrompt = messages.find(m => m.role === 'system')?.content || ''
-
-          const response = await anthropic.messages.create({
-            model: 'claude-sonnet-4-5-20250929',
-            max_tokens: 16384, // Increased for longer, more complete code
-            temperature: 0.2, // Lower for more focused, production-quality code
-            system: systemPrompt,
-            messages: claudeMessages as any,
-            tools: TOOL_DEFINITIONS.map(tool => ({
-              name: tool.function.name,
-              description: tool.function.description,
-              input_schema: tool.function.parameters,
-            })) as any,
+            }
+            return {
+              role: m.role === 'assistant' ? 'assistant' : 'user',
+              content: m.content || ' ', // Ensure content is never empty
+            }
           })
 
-          // Convert Claude response to OpenAI format
-          const content = response.content.find(c => c.type === 'text')
-          const toolCalls = response.content.filter(c => c.type === 'tool_use')
+        const systemPrompt = messages.find(m => m.role === 'system')?.content || ''
 
-          assistantMessage = {
-            role: 'assistant',
-            content: content?.type === 'text' ? content.text : '',
-            tool_calls: toolCalls.length > 0 ? toolCalls.map(tc => ({
-              id: tc.type === 'tool_use' ? tc.id : '',
-              type: 'function',
-              function: {
-                name: tc.type === 'tool_use' ? tc.name : '',
-                arguments: JSON.stringify(tc.type === 'tool_use' ? tc.input : {}),
-              },
-            })) : undefined,
-          }
-        } else {
-          // Use OpenAI GPT-4
-          const response = await openai.chat.completions.create({
-            model: 'gpt-4-turbo-preview', // Use turbo for better performance
-            messages: messages as any,
-            tools: TOOL_DEFINITIONS as any,
-            tool_choice: 'auto',
-            temperature: 0.2, // Lower for more focused code
-            max_tokens: 16384, // Increased for complete code
-          })
+        // Call Claude API
+        const response = await anthropic.messages.create({
+          model: 'claude-sonnet-4-5-20250929',
+          max_tokens: 16384, // Increased for longer, more complete code
+          temperature: 0.2, // Lower for more focused, production-quality code
+          system: systemPrompt,
+          messages: claudeMessages as any,
+          tools: TOOL_DEFINITIONS.map(tool => ({
+            name: tool.function.name,
+            description: tool.function.description,
+            input_schema: tool.function.parameters,
+          })) as any,
+        })
 
-          assistantMessage = response.choices[0]?.message
+        // Convert Claude response to internal format
+        const content = response.content.find(c => c.type === 'text')
+        const toolCalls = response.content.filter(c => c.type === 'tool_use')
+
+        const assistantMessage = {
+          role: 'assistant',
+          content: content?.type === 'text' ? content.text : '',
+          tool_calls: toolCalls.length > 0 ? toolCalls.map(tc => ({
+            id: tc.type === 'tool_use' ? tc.id : '',
+            type: 'function',
+            function: {
+              name: tc.type === 'tool_use' ? tc.name : '',
+              arguments: JSON.stringify(tc.type === 'tool_use' ? tc.input : {}),
+            },
+          })) : undefined,
         }
 
         if (!assistantMessage) {
