@@ -63,6 +63,15 @@ interface AgentStep {
   type: 'tool_call' | 'tool_result' | 'response' | 'progress'
   content: string
   tool_name?: string
+  tool_args?: Record<string, any>
+  tool_result?: {
+    success: boolean
+    file_path?: string
+    message?: string
+    project_name?: string
+    [key: string]: any
+  }
+  timestamp: string | Date
   progress?: {
     current: number
     total: number
@@ -606,129 +615,157 @@ export default function MainContent({ className = '' }: Props) {
         className="pointer-events-none absolute bottom-40 right-0 z-50 translate-x-1/2 -rotate-90 select-none"
       />
 
-      {/* Watch Live Side Panel */}
+      {/* Watch Live Panel - Inside Chat Container */}
       {showWatchLive && (
-        <div className="fixed right-0 top-0 z-[9998] h-full w-[500px] border-l border-[#10F3FE]/30 bg-[#001a1f] shadow-2xl">
-          <div className="flex h-full flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-[#10F3FE]/30 bg-black/40 p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-3 w-3 animate-pulse rounded-full bg-red-500"></div>
-                <h3 className="text-lg font-bold text-white">🔴 Live Code Generation</h3>
-              </div>
-              <button
-                onClick={() => setShowWatchLive(false)}
-                className="rounded-lg bg-white/10 px-3 py-1 text-white transition hover:bg-white/20"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-4">
-              {liveSteps.length === 0 ? (
-                <div className="flex h-full items-center justify-center text-white/50">
-                  <div className="text-center">
-                    <div className="mb-2 text-4xl">👀</div>
-                    <p>Waiting for AI to start generating...</p>
+        <div className="absolute left-4 top-24 z-[100] w-[calc(100%-2rem)]">
+          <div className="relative">
+            {/* Teal Glowing Border Effect */}
+            <div className="absolute inset-0 rounded-lg bg-[#10F3FE] opacity-50 blur-xl"></div>
+            <div className="absolute inset-0 rounded-lg border-2 border-[#10F3FE] shadow-[0_0_20px_rgba(16,243,254,0.5)]"></div>
+            
+            {/* Panel Content */}
+            <div className="relative rounded-lg border-2 border-[#10F3FE] bg-[#001a1f]/95 backdrop-blur-md" style={{ height: 'calc(100vh - 280px)' }}>
+              <div className="flex h-full flex-col">
+                {/* Header */}
+                <div className="flex items-center justify-between border-b-2 border-[#10F3FE]/30 bg-gradient-to-r from-[#10F3FE]/20 to-transparent p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-[#10F3FE] shadow-[0_0_10px_rgba(16,243,254,0.8)]"></div>
+                    <h3 className="text-sm font-bold text-[#10F3FE]">LIVE CODE GENERATION</h3>
+                    {liveSteps.length > 0 && (
+                      <span className="rounded-full bg-[#10F3FE]/20 px-2 py-0.5 text-xs font-semibold text-[#10F3FE]">
+                        {liveSteps.length} ops
+                      </span>
+                    )}
                   </div>
+                  <button
+                    onClick={() => setShowWatchLive(false)}
+                    className="rounded-md bg-[#10F3FE]/10 px-2.5 py-1 text-xs text-[#10F3FE] transition hover:bg-[#10F3FE]/20"
+                  >
+                    ✕ Close
+                  </button>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {liveSteps.map((step, index) => (
-                    <div
-                      key={index}
-                      className="rounded-lg border border-[#10F3FE]/20 bg-black/40 p-3 backdrop-blur-sm"
-                    >
-                      {/* Tool Call */}
-                      {step.type === 'tool_call' && (
-                        <div>
-                          <div className="mb-2 flex items-center gap-2">
-                            <div className="h-2 w-2 animate-pulse rounded-full bg-yellow-400"></div>
-                            <span className="text-xs font-semibold text-yellow-400">EXECUTING</span>
-                          </div>
-                          <div className="text-sm text-white">
-                            🔧 <span className="font-mono text-[#10F3FE]">{step.tool_name}</span>
-                          </div>
-                          {step.tool_args && (
-                            <div className="mt-2 rounded bg-black/60 p-2">
-                              <pre className="overflow-x-auto text-xs text-white/70">
-                                {JSON.stringify(step.tool_args, null, 2)}
-                              </pre>
-                            </div>
-                          )}
-                        </div>
-                      )}
 
-                      {/* Tool Result */}
-                      {step.type === 'tool_result' && (
-                        <div>
-                          <div className="mb-2 flex items-center gap-2">
-                            <div className="h-2 w-2 rounded-full bg-green-400"></div>
-                            <span className="text-xs font-semibold text-green-400">COMPLETED</span>
-                          </div>
-                          <div className="text-sm text-white">
-                            ✓ <span className="font-mono text-green-400">{step.tool_name}</span>
-                          </div>
-                          {step.tool_result?.file_path && (
-                            <div className="mt-2 text-xs text-[#10F3FE]">
-                              📄 {step.tool_result.file_path}
-                            </div>
-                          )}
+                {/* Content - Scrollable */}
+                <div className="flex-1 overflow-y-auto p-3">
+                  {liveSteps.length === 0 ? (
+                    <div className="flex h-full items-center justify-center text-[#10F3FE]/50">
+                      <div className="text-center">
+                        <div className="mb-3 text-5xl">👀</div>
+                        <p className="text-sm">Waiting for AI to start generating...</p>
+                        <div className="mt-4 flex justify-center gap-2">
+                          <div className="h-2 w-2 animate-pulse rounded-full bg-[#10F3FE]/50"></div>
+                          <div className="h-2 w-2 animate-pulse rounded-full bg-[#10F3FE]/50" style={{ animationDelay: '0.2s' }}></div>
+                          <div className="h-2 w-2 animate-pulse rounded-full bg-[#10F3FE]/50" style={{ animationDelay: '0.4s' }}></div>
                         </div>
-                      )}
-
-                      {/* Progress */}
-                      {step.type === 'progress' && step.progress && (
-                        <div>
-                          <div className="mb-2 flex items-center justify-between">
-                            <span className="text-xs font-semibold text-white">{step.content}</span>
-                            <span className="text-xs font-bold text-[#10F3FE]">
-                              {step.progress.percentage}%
-                            </span>
-                          </div>
-                          <div className="h-2 overflow-hidden rounded-full bg-white/20">
-                            <div
-                              className="h-full bg-gradient-to-r from-[#10F3FE] to-cyan-400 transition-all duration-300"
-                              style={{ width: `${step.progress.percentage}%` }}
-                            />
-                          </div>
-                          <div className="mt-1 text-xs text-white/60">
-                            {step.progress.current} / {step.progress.total} files
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Timestamp */}
-                      <div className="mt-2 text-xs text-white/40">
-                        {new Date(step.timestamp).toLocaleTimeString()}
                       </div>
                     </div>
-                  ))}
-                  <div ref={liveEndRef} />
-                </div>
-              )}
-            </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {liveSteps.map((step, index) => (
+                        <div
+                          key={index}
+                          className="group rounded-md border border-[#10F3FE]/30 bg-black/40 p-2.5 transition hover:border-[#10F3FE]/50 hover:bg-black/60"
+                        >
+                          {/* Tool Call */}
+                          {step.type === 'tool_call' && (
+                            <div>
+                              <div className="mb-1.5 flex items-center gap-2">
+                                <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.8)]"></div>
+                                <span className="text-xs font-bold text-yellow-400">⚡ EXECUTING</span>
+                                <span className="text-xs text-white/60">{new Date(step.timestamp).toLocaleTimeString()}</span>
+                              </div>
+                              <div className="text-xs text-white">
+                                🔧 <span className="font-mono font-semibold text-[#10F3FE]">{step.tool_name}</span>
+                              </div>
+                              {step.tool_args && step.tool_args.file_path && (
+                                <div className="mt-1 text-xs text-white/70">
+                                  📄 {step.tool_args.file_path}
+                                </div>
+                              )}
+                              {step.tool_args && step.tool_args.project_name && (
+                                <div className="mt-1 text-xs text-white/70">
+                                  📦 {step.tool_args.project_name}
+                                </div>
+                              )}
+                            </div>
+                          )}
 
-            {/* Footer Stats */}
-            <div className="border-t border-[#10F3FE]/30 bg-black/40 p-4">
-              <div className="flex items-center justify-between text-sm">
-                <div className="text-white/70">
-                  <span className="font-bold text-white">{liveSteps.length}</span> operations
+                          {/* Tool Result */}
+                          {step.type === 'tool_result' && (
+                            <div>
+                              <div className="mb-1.5 flex items-center gap-2">
+                                <div className="h-1.5 w-1.5 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.8)]"></div>
+                                <span className="text-xs font-bold text-green-400">✓ COMPLETED</span>
+                                <span className="text-xs text-white/60">{new Date(step.timestamp).toLocaleTimeString()}</span>
+                              </div>
+                              <div className="text-xs text-white">
+                                ✓ <span className="font-mono font-semibold text-green-400">{step.tool_name}</span>
+                              </div>
+                              {step.tool_result?.file_path && (
+                                <div className="mt-1 rounded bg-[#10F3FE]/10 px-2 py-1 text-xs text-[#10F3FE]">
+                                  📄 {step.tool_result.file_path}
+                                </div>
+                              )}
+                              {step.tool_result?.message && (
+                                <div className="mt-1 text-xs text-white/60">
+                                  {step.tool_result.message}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Progress */}
+                          {step.type === 'progress' && step.progress && (
+                            <div>
+                              <div className="mb-1.5 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#10F3FE]"></div>
+                                  <span className="text-xs font-semibold text-white">{step.content}</span>
+                                </div>
+                                <span className="text-xs font-bold text-[#10F3FE]">
+                                  {step.progress.percentage}%
+                                </span>
+                              </div>
+                              <div className="relative h-1.5 overflow-hidden rounded-full bg-white/10">
+                                <div
+                                  className="h-full bg-gradient-to-r from-[#10F3FE] via-cyan-400 to-[#10F3FE] transition-all duration-500 shadow-[0_0_10px_rgba(16,243,254,0.5)]"
+                                  style={{ width: `${step.progress.percentage}%` }}
+                                />
+                              </div>
+                              <div className="mt-1 flex items-center justify-between text-xs text-white/60">
+                                <span>{step.progress.current} / {step.progress.total} files</span>
+                                <span>{new Date(step.timestamp).toLocaleTimeString()}</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      <div ref={liveEndRef} />
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-2">
-                  {isLoading && (
-                    <>
-                      <div className="h-2 w-2 animate-pulse rounded-full bg-[#10F3FE]"></div>
-                      <span className="text-[#10F3FE]">Generating...</span>
-                    </>
-                  )}
-                  {!isLoading && liveSteps.length > 0 && (
-                    <>
-                      <div className="h-2 w-2 rounded-full bg-green-400"></div>
-                      <span className="text-green-400">Complete</span>
-                    </>
-                  )}
+
+                {/* Footer Stats */}
+                <div className="border-t-2 border-[#10F3FE]/30 bg-gradient-to-r from-[#10F3FE]/10 to-transparent p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-white/70">
+                      Total: <span className="font-bold text-[#10F3FE]">{liveSteps.length}</span> operations
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isLoading && (
+                        <>
+                          <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#10F3FE] shadow-[0_0_8px_rgba(16,243,254,0.8)]"></div>
+                          <span className="text-xs font-semibold text-[#10F3FE]">Generating...</span>
+                        </>
+                      )}
+                      {!isLoading && liveSteps.length > 0 && (
+                        <>
+                          <div className="h-1.5 w-1.5 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.8)]"></div>
+                          <span className="text-xs font-semibold text-green-400">Complete</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
