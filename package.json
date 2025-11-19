@@ -26,6 +26,7 @@
     ]
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.70.0",
     "@heroicons/react": "^2.2.0",
     "@heroui/react": "^2.8.4",
     "@heroui/theme": "^2.4.22",

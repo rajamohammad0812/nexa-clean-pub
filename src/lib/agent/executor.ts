@@ -1,8 +1,16 @@
 import OpenAI from 'openai'
+import Anthropic from '@anthropic-ai/sdk'
 import { AgentTools, TOOL_DEFINITIONS, ToolResult } from './tools'
+
+// Choose your AI model: 'claude' or 'openai'
+const AI_PROVIDER = process.env.AI_PROVIDER || 'claude' // Default to Claude
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
+})
+
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
 })
 
 export interface AgentMessage {
@@ -128,15 +136,60 @@ All paths relative to project root (generated-projects/${this.projectId}/)`,
       while (!finished && iterations < this.maxIterations) {
         iterations++
 
-        const response = await openai.chat.completions.create({
-          model: 'gpt-4',
-          messages: messages as any,
-          tools: TOOL_DEFINITIONS as any,
-          tool_choice: 'auto',
-          temperature: 0.3,
-        })
+        let assistantMessage: any
 
-        const assistantMessage = response.choices[0]?.message
+        if (AI_PROVIDER === 'claude') {
+          // Use Claude 3.5 Sonnet
+          const claudeMessages = messages
+            .filter(m => m.role !== 'system')
+            .map(m => ({
+              role: m.role === 'assistant' ? 'assistant' : 'user',
+              content: m.content,
+            }))
+
+          const systemPrompt = messages.find(m => m.role === 'system')?.content || ''
+
+          const response = await anthropic.messages.create({
+            model: 'claude-3-5-sonnet-20241022',
+            max_tokens: 8192,
+            temperature: 0.3,
+            system: systemPrompt,
+            messages: claudeMessages as any,
+            tools: TOOL_DEFINITIONS.map(tool => ({
+              name: tool.function.name,
+              description: tool.function.description,
+              input_schema: tool.function.parameters,
+            })) as any,
+          })
+
+          // Convert Claude response to OpenAI format
+          const content = response.content.find(c => c.type === 'text')
+          const toolCalls = response.content.filter(c => c.type === 'tool_use')
+
+          assistantMessage = {
+            role: 'assistant',
+            content: content?.type === 'text' ? content.text : '',
+            tool_calls: toolCalls.length > 0 ? toolCalls.map(tc => ({
+              id: tc.type === 'tool_use' ? tc.id : '',
+              type: 'function',
+              function: {
+                name: tc.type === 'tool_use' ? tc.name : '',
+                arguments: JSON.stringify(tc.type === 'tool_use' ? tc.input : {}),
+              },
+            })) : undefined,
+          }
+        } else {
+          // Use OpenAI GPT-4
+          const response = await openai.chat.completions.create({
+            model: 'gpt-4',
+            messages: messages as any,
+            tools: TOOL_DEFINITIONS as any,
+            tool_choice: 'auto',
+            temperature: 0.3,
+          })
+
+          assistantMessage = response.choices[0]?.message
+        }
 
         if (!assistantMessage) {
           throw new Error('No response from AI')
