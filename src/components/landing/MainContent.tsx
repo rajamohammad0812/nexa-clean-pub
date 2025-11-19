@@ -810,6 +810,14 @@ export default function MainContent({ className = '' }: Props) {
 
                 {/* Content - Scrollable */}
                 <div className="flex-1 overflow-y-auto p-3">
+                  {/* Debug Info */}
+                  {liveSteps.length > 0 && (
+                    <div className="mb-2 rounded bg-yellow-500/10 p-2 text-[9px] text-yellow-300">
+                      Debug: {liveSteps.length} steps | 
+                      Types: {liveSteps.map(s => s.type).join(', ')} |
+                      Last step: {JSON.stringify(liveSteps[liveSteps.length - 1], null, 2).substring(0, 200)}...
+                    </div>
+                  )}
                   {liveSteps.length === 0 ? (
                     <div className="flex h-full items-center justify-center text-[#10F3FE]/50">
                       <div className="text-center">
@@ -849,6 +857,24 @@ export default function MainContent({ className = '' }: Props) {
                                 <div className="mt-1 text-xs text-white/70">
                                   📦 {step.tool_args.project_name}
                                 </div>
+                              )}
+                              
+                              {/* Show code immediately for write_file */}
+                              {step.tool_name === 'write_file' && step.tool_args?.content && (
+                                <details className="mt-2 group/code" open>
+                                  <summary className="cursor-pointer text-xs text-[#10F3FE]/70 hover:text-[#10F3FE] flex items-center gap-1">
+                                    <span className="group-open/code:rotate-90 transition-transform">▶</span>
+                                    Code Preview ({step.tool_args.content.length} chars)
+                                  </summary>
+                                  <div className="mt-1 max-h-[200px] overflow-auto rounded bg-black/80 p-2 border border-[#10F3FE]/20">
+                                    <pre className="text-[10px] text-white/80 font-mono leading-tight whitespace-pre-wrap">
+                                      {step.tool_args.content.substring(0, 1000)}
+                                      {step.tool_args.content.length > 1000 && (
+                                        <span className="text-[#10F3FE]/50">\n\n... ({step.tool_args.content.length - 1000} more chars)</span>
+                                      )}
+                                    </pre>
+                                  </div>
+                                </details>
                               )}
                             </div>
                           )}
