@@ -89,6 +89,31 @@ export default function MainContent({ className = '' }: Props) {
   const clipPathInner =
     'polygon(25px 0, 34.8% 0, calc(35% + 22px) 25px, calc(35% + 22px) 70px, 38.8% 90px, 97.5% 90px, 100% 110px, 100% calc(100% - 25px), calc(100% - 25px) 100%, 0 100%, 0 25px)'
 
+  // Load chat history from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('chat-history')
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved)
+          setMessages(parsed.map((m: any) => ({
+            ...m,
+            timestamp: new Date(m.timestamp),
+          })))
+        } catch (e) {
+          console.error('Failed to load chat history:', e)
+        }
+      }
+    }
+  }, [])
+
+  // Save chat history to localStorage whenever messages change
+  useEffect(() => {
+    if (typeof window !== 'undefined' && messages.length > 0) {
+      localStorage.setItem('chat-history', JSON.stringify(messages))
+    }
+  }, [messages])
+
   useEffect(() => {
     if (messagesEndRef.current) {
       const chatContainer = messagesEndRef.current.closest('.overflow-y-auto')
@@ -474,7 +499,12 @@ export default function MainContent({ className = '' }: Props) {
               </div>
 
               <button
-                onClick={() => setMessages([])}
+                onClick={() => {
+                  setMessages([])
+                  if (typeof window !== 'undefined') {
+                    localStorage.removeItem('chat-history')
+                  }
+                }}
                 className="absolute right-2 top-2 rounded bg-black/40 px-2 py-1 text-xs text-white backdrop-blur-sm transition hover:bg-black/60"
               >
                 Clear
