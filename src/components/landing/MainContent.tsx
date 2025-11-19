@@ -446,10 +446,10 @@ export default function MainContent({ className = '' }: Props) {
 
           {messages.length > 0 && (
             <div
-              className="absolute overflow-hidden rounded-lg bg-black/20 backdrop-blur-sm"
+              className="absolute overflow-hidden rounded-lg bg-black/20 backdrop-blur-sm transition-all duration-300"
               style={{
                 left: '20px',
-                right: '20px',
+                right: showWatchLive ? 'calc(50% + 10px)' : '20px',
                 top: '60px',
                 bottom: '100px',
               }}
@@ -766,16 +766,16 @@ export default function MainContent({ className = '' }: Props) {
         className="pointer-events-none absolute bottom-40 right-0 z-50 translate-x-1/2 -rotate-90 select-none"
       />
 
-      {/* Watch Live Panel - Inside Chat Container */}
+      {/* Watch Live Panel - Half Width Side by Side */}
       {showWatchLive && (
-        <div className="absolute left-4 top-24 z-[100] w-[calc(100%-2rem)]">
+        <div className="absolute right-4 top-24 z-[100] w-[calc(50%-2rem)]">
           <div className="relative">
             {/* Teal Glowing Border Effect */}
             <div className="absolute inset-0 rounded-lg bg-[#10F3FE] opacity-50 blur-xl"></div>
             <div className="absolute inset-0 rounded-lg border-2 border-[#10F3FE] shadow-[0_0_20px_rgba(16,243,254,0.5)]"></div>
             
             {/* Panel Content */}
-            <div className="relative rounded-lg border-2 border-[#10F3FE] bg-[#001a1f]/95 backdrop-blur-md" style={{ height: 'calc(100vh - 280px)' }}>
+            <div className="relative rounded-lg border-2 border-[#10F3FE] bg-[#001a1f]/98 backdrop-blur-md" style={{ height: 'calc(100vh - 280px)' }}>
               <div className="flex h-full flex-col">
                 {/* Header */}
                 <div className="flex items-center justify-between border-b-2 border-[#10F3FE]/30 bg-gradient-to-r from-[#10F3FE]/20 to-transparent p-3">
@@ -841,7 +841,7 @@ export default function MainContent({ className = '' }: Props) {
                             </div>
                           )}
 
-                          {/* Tool Result */}
+                          {/* Tool Result - with Code Preview */}
                           {step.type === 'tool_result' && (
                             <div>
                               <div className="mb-1.5 flex items-center gap-2">
@@ -852,11 +852,41 @@ export default function MainContent({ className = '' }: Props) {
                               <div className="text-xs text-white">
                                 ✓ <span className="font-mono font-semibold text-green-400">{step.tool_name}</span>
                               </div>
+                              
+                              {/* File Path with Folder Structure */}
                               {step.tool_result?.file_path && (
-                                <div className="mt-1 rounded bg-[#10F3FE]/10 px-2 py-1 text-xs text-[#10F3FE]">
-                                  📄 {step.tool_result.file_path}
+                                <div className="mt-2 space-y-1">
+                                  <div className="flex items-center gap-1 text-xs">
+                                    {step.tool_result.file_path.split('/').map((part: string, i: number, arr: string[]) => (
+                                      <div key={i} className="flex items-center gap-1">
+                                        <span className={i === arr.length - 1 ? 'text-[#10F3FE] font-semibold' : 'text-white/50'}>
+                                          {i < arr.length - 1 ? '📁' : '📄'} {part}
+                                        </span>
+                                        {i < arr.length - 1 && <span className="text-white/30">/</span>}
+                                      </div>
+                                    ))}
+                                  </div>
+                                  
+                                  {/* Code Preview */}
+                                  {step.tool_args && step.tool_args.content && step.tool_name === 'write_file' && (
+                                    <details className="mt-2 group/code">
+                                      <summary className="cursor-pointer text-xs text-[#10F3FE]/70 hover:text-[#10F3FE] flex items-center gap-1">
+                                        <span className="group-open/code:rotate-90 transition-transform">▶</span>
+                                        View Code
+                                      </summary>
+                                      <div className="mt-1 max-h-[200px] overflow-auto rounded bg-black/80 p-2 border border-[#10F3FE]/20">
+                                        <pre className="text-[10px] text-white/80 font-mono leading-tight">
+                                          {step.tool_args.content.substring(0, 500)}
+                                          {step.tool_args.content.length > 500 && (
+                                            <span className="text-[#10F3FE]/50">\n... ({step.tool_args.content.length - 500} more chars)</span>
+                                          )}
+                                        </pre>
+                                      </div>
+                                    </details>
+                                  )}
                                 </div>
                               )}
+                              
                               {step.tool_result?.message && (
                                 <div className="mt-1 text-xs text-white/60">
                                   {step.tool_result.message}
