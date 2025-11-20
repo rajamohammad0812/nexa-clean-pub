@@ -251,12 +251,13 @@ Additional context:
       }
 
       // Validate and ensure template selection
-      if (!analysis.recommendedTemplate || !analysis.recommendedTemplate.id) {
+      const recommendedTemplate = analysis.recommendedTemplate as any
+      if (!recommendedTemplate || !recommendedTemplate.id) {
         console.warn('AI did not provide template recommendation, using fallback selection')
         const fallbackTemplate = TemplateSelector.selectTemplate(
-          analysis.projectType, 
-          analysis.complexity,
-          analysis.keyFeatures.map(f => f.name)
+          analysis.projectType as any, 
+          analysis.complexity as any,
+          Array.isArray(analysis.keyFeatures) ? (analysis.keyFeatures as any[]).map((f: any) => f.name) : []
         )
         analysis.recommendedTemplate = {
           id: fallbackTemplate.id,
@@ -265,13 +266,13 @@ Additional context:
         }
       } else {
         // Validate that the AI-selected template exists
-        const templateExists = TemplateSelector.getTemplateById(analysis.recommendedTemplate.id)
+        const templateExists = TemplateSelector.getTemplateById(recommendedTemplate.id)
         if (!templateExists) {
-          console.warn(`AI recommended non-existent template: ${analysis.recommendedTemplate.id}, using fallback`)
+          console.warn(`AI recommended non-existent template: ${recommendedTemplate.id}, using fallback`)
           const fallbackTemplate = TemplateSelector.selectTemplate(
-            analysis.projectType, 
-            analysis.complexity,
-            analysis.keyFeatures.map(f => f.name)
+            analysis.projectType as any, 
+            analysis.complexity as any,
+            Array.isArray(analysis.keyFeatures) ? (analysis.keyFeatures as any[]).map((f: any) => f.name) : []
           )
           analysis.recommendedTemplate = {
             id: fallbackTemplate.id,
@@ -283,7 +284,7 @@ Additional context:
 
       return {
         success: true,
-        analysis: analysis as ProjectAnalysis,
+        analysis: analysis as unknown as ProjectAnalysis,
         confidence: 0.85 // Base confidence score
       }
 

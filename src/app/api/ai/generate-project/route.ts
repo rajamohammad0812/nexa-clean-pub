@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ProjectGeneratorAI, ProjectRequirements } from '@/lib/ai/project-generator'
-import { spawn } from 'child_process'
-import path from 'path'
+import { SingleBuildExecutor, BuildExecutorOptions } from '@/lib/build-executor'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 
 interface GenerateProjectRequest {
   requirements: ProjectRequirements
@@ -10,15 +12,32 @@ interface GenerateProjectRequest {
 
 export async function POST(request: NextRequest) {
   try {
-    // Check if OpenAI API key is configured
-    if (!process.env.OPENAI_API_KEY) {
+    // Check if Anthropic API key is configured
+    if (!process.env.ANTHROPIC_API_KEY) {
       return NextResponse.json(
         { 
-          error: 'OpenAI API key not configured. Please add OPENAI_API_KEY to your environment variables.',
-          suggestion: 'Get your API key from https://platform.openai.com/api-keys'
+          error: 'Anthropic API key not configured. Please add ANTHROPIC_API_KEY to your environment variables.',
+          suggestion: 'Get your API key from https://console.anthropic.com/'
         },
         { status: 500 }
       )
+    }
+
+    // Get user session and userId
+    const session = await getServerSession(authOptions)
+    let userId: string | undefined
+    
+    if (session?.user?.email) {
+      try {
+        const user = await prisma.user.findUnique({
+          where: { email: session.user.email },
+          select: { id: true }
+        })
+        userId = user?.id
+      } catch (error) {
+        console.error('Error fetching user:', error)
+        // Continue without userId - project will still be generated
+      }
     }
 
     const body: GenerateProjectRequest = await request.json()
@@ -39,18 +58,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Generate detailed project plan using AI
+    // Generate detailed project plan using AI (optional, for documentation)
     const projectPlan = await ProjectGeneratorAI.generateProjectPlan(body.requirements)
 
-    // Call CLI to generate the project
-    const cliResult = await generateProjectWithCLI(body.projectName, body.requirements)
-
-    return NextResponse.json({
-      success: true,
+    // Execute build using Single Build Executor with agent-based generation
+    const executor = new SingleBuildExecutor()
+    
+    const buildOptions: BuildExecutorOptions = {
       projectName: body.projectName,
       requirements: body.requirements,
+      userId,
+      maxIterations: 30,
+    }
+
+    const buildResult = await executor.execute(buildOptions)
+
+    return NextResponse.json({
+      success: buildResult.success,
+      projectName: body.projectName,
+      projectId: buildResult.projectId,
+      projectPath: buildResult.projectPath,
+      aiProjectId: buildResult.aiProjectId,
+      requirements: body.requirements,
       projectPlan,
-      cliResult,
+      progress: buildResult.progress,
+      agentSteps: buildResult.agentResult.steps.length,
+      error: buildResult.error,
       timestamp: new Date().toISOString(),
     })
 
@@ -62,8 +95,8 @@ export async function POST(request: NextRequest) {
       if (error.message.includes('API key')) {
         return NextResponse.json(
           { 
-            error: 'Invalid OpenAI API key. Please check your API key configuration.',
-            suggestion: 'Verify your OPENAI_API_KEY environment variable is correct.'
+            error: 'Invalid Anthropic API key. Please check your API key configuration.',
+            suggestion: 'Verify your ANTHROPIC_API_KEY environment variable is correct.'
           },
           { status: 401 }
         )
@@ -73,7 +106,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           { 
             error: 'Rate limit exceeded. Please try again in a moment.',
-            suggestion: 'You can upgrade your OpenAI plan for higher rate limits.'
+            suggestion: 'You can upgrade your Anthropic plan for higher rate limits.'
           },
           { status: 429 }
         )
@@ -88,104 +121,6 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
-
-/**
- * Calls the CLI to generate a project based on requirements
- */
-async function generateProjectWithCLI(
-  projectName: string, 
-  requirements: ProjectRequirements
-): Promise<{
-  success: boolean
-  output?: string
-  error?: string
-  projectPath?: string
-}> {
-  return new Promise((resolve) => {
-    try {
-      // Path to our CLI
-      const cliPath = path.resolve(process.cwd(), 'packages/cli/dist/index.js')
-      
-      // Temporary directory for generated projects (you can customize this)
-      const tempDir = path.resolve(process.cwd(), 'temp-projects')
-      
-      // Build CLI command - using AI description generation
-      const cliArgs = [
-        cliPath,
-        'create',
-        projectName,
-        '--description',
-        `${requirements.description}. Features: ${requirements.features.join(', ')}`,
-        '--no-install', // Don't install dependencies in temp directory
-        '--no-git'      // Don't initialize git in temp directory
-      ]
-
-      console.log('Executing CLI:', 'node', cliArgs.join(' '))
-
-      // Execute CLI
-      const cliProcess = spawn('node', cliArgs, {
-        cwd: tempDir,
-        stdio: 'pipe'
-      })
-
-      let output = ''
-      let errorOutput = ''
-
-      // Capture output
-      cliProcess.stdout?.on('data', (data) => {
-        output += data.toString()
-      })
-
-      cliProcess.stderr?.on('data', (data) => {
-        errorOutput += data.toString()
-      })
-
-      // Handle completion
-      cliProcess.on('close', (code) => {
-        if (code === 0) {
-          resolve({
-            success: true,
-            output: output,
-            projectPath: path.join(tempDir, projectName)
-          })
-        } else {
-          console.error('CLI error output:', errorOutput)
-          resolve({
-            success: false,
-            error: errorOutput || `CLI process exited with code ${code}`,
-            output: output
-          })
-        }
-      })
-
-      // Handle errors
-      cliProcess.on('error', (error) => {
-        console.error('CLI spawn error:', error)
-        resolve({
-          success: false,
-          error: `Failed to start CLI process: ${error.message}`
-        })
-      })
-
-      // Set timeout to prevent hanging
-      setTimeout(() => {
-        if (!cliProcess.killed) {
-          cliProcess.kill()
-          resolve({
-            success: false,
-            error: 'CLI process timed out after 60 seconds'
-          })
-        }
-      }, 60000) // 60 second timeout
-
-    } catch (error) {
-      resolve({
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown CLI error'
-      })
-    }
-  })
 }
 
 /**

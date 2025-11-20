@@ -530,21 +530,17 @@ function renderStepSpecificConfig(
           </div>
           <div>
             <Label>Method</Label>
-            <Select
+            <select
               value={String(config.method || 'GET')}
-              onValueChange={(value) => updateConfig('method', value)}
+              onChange={(e) => updateConfig('method', e.target.value)}
+              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
             >
-              <SelectTrigger className="mt-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="GET">GET</SelectItem>
-                <SelectItem value="POST">POST</SelectItem>
-                <SelectItem value="PUT">PUT</SelectItem>
-                <SelectItem value="PATCH">PATCH</SelectItem>
-                <SelectItem value="DELETE">DELETE</SelectItem>
-              </SelectContent>
-            </Select>
+              <option value="GET">GET</option>
+              <option value="POST">POST</option>
+              <option value="PUT">PUT</option>
+              <option value="PATCH">PATCH</option>
+              <option value="DELETE">DELETE</option>
+            </select>
           </div>
           <div>
             <Label>Request Body (JSON)</Label>

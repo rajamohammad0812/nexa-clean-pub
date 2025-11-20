@@ -4,7 +4,7 @@
  */
 
 import { prisma } from '@/lib/prisma'
-import { ExecutionStatus, StepType } from '@prisma/client'
+import { ExecutionStatus, StepType, WorkflowStep, Prisma } from '@prisma/client'
 import { Logger } from '@/lib/utils/logger'
 
 export interface WorkflowContext {
@@ -74,8 +74,8 @@ export class WorkflowEngine {
           status: ExecutionStatus.RUNNING,
           startedAt: new Date(),
           triggeredBy,
-          triggerData: triggerData || {},
-          stepResults: {},
+          triggerData: (triggerData || {}) as Prisma.InputJsonValue,
+          stepResults: {} as Prisma.InputJsonValue,
         },
       })
 
@@ -126,7 +126,7 @@ export class WorkflowEngine {
         data: {
           status: ExecutionStatus.SUCCESS,
           finishedAt: new Date(),
-          stepResults: context.stepResults,
+          stepResults: context.stepResults as Prisma.InputJsonValue,
         },
       })
 
@@ -139,7 +139,7 @@ export class WorkflowEngine {
           status: ExecutionStatus.FAILED,
           finishedAt: new Date(),
           error: error instanceof Error ? error.message : String(error),
-          stepResults: context.stepResults,
+          stepResults: context.stepResults as Prisma.InputJsonValue,
         },
       })
 
@@ -182,7 +182,7 @@ export class WorkflowEngine {
         })
 
         // Check step conditions
-        if (step.conditions && !this.evaluateConditions(step.conditions, context)) {
+        if (step.conditions && !this.evaluateConditions(step.conditions as Record<string, unknown>, context)) {
           this.logger.info(`Step skipped due to conditions`, { stepId })
 
           await prisma.stepExecution.update({
@@ -255,25 +255,25 @@ export class WorkflowEngine {
 
     switch (type) {
       case StepType.API_CALL:
-        return await this.executeApiCall(config, context)
+        return await this.executeApiCall(config as Record<string, unknown>, context)
 
       case StepType.DELAY:
-        return await this.executeDelay(config, context)
+        return await this.executeDelay(config as Record<string, unknown>, context)
 
       case StepType.TRANSFORM:
-        return await this.executeTransform(config, context)
+        return await this.executeTransform(config as Record<string, unknown>, context)
 
       case StepType.WEBHOOK:
-        return await this.executeWebhook(config, context)
+        return await this.executeWebhook(config as Record<string, unknown>, context)
 
       case StepType.EMAIL:
-        return await this.executeEmail(config, context)
+        return await this.executeEmail(config as Record<string, unknown>, context)
 
       case StepType.CONDITIONAL:
-        return await this.executeConditional(config, context)
+        return await this.executeConditional(config as Record<string, unknown>, context)
 
       case StepType.CUSTOM:
-        return await this.executeCustom(config, context)
+        return await this.executeCustom(config as Record<string, unknown>, context)
 
       default:
         throw new Error(`Unsupported step type: ${type}`)
@@ -290,11 +290,11 @@ export class WorkflowEngine {
     const { url, method = 'GET', headers = {}, body } = config
 
     try {
-      const response = await fetch(url, {
-        method,
+      const response = await fetch(url as string, {
+        method: method as string,
         headers: {
           'Content-Type': 'application/json',
-          ...headers,
+          ...(headers as Record<string, string>),
         },
         body: body ? JSON.stringify(body) : undefined,
       })
@@ -323,7 +323,7 @@ export class WorkflowEngine {
   ): Promise<ExecutionResult> {
     const { duration = 1000 } = config
 
-    await new Promise((resolve) => setTimeout(resolve, duration))
+    await new Promise((resolve) => setTimeout(resolve, duration as number))
 
     return {
       success: true,
@@ -341,13 +341,13 @@ export class WorkflowEngine {
   ): Promise<ExecutionResult> {
     const { source, transformations = [] } = config
 
-    let data = context.stepResults[source] || {}
+    let data = context.stepResults[source as string] || {}
 
-    for (const transform of transformations) {
+    for (const transform of (transformations as any[])) {
       // Apply transformation logic here
       // This is a simplified version - in production you'd want a more robust transformer
       if (transform.type === 'map') {
-        data = transform.mapping ? this.applyMapping(data, transform.mapping) : data
+        data = transform.mapping ? this.applyMapping(data as Record<string, unknown>, transform.mapping) : data
       }
     }
 
@@ -396,7 +396,7 @@ export class WorkflowEngine {
   ): Promise<ExecutionResult> {
     const { condition } = config
 
-    const conditionResult = this.evaluateConditions(condition, context)
+    const conditionResult = this.evaluateConditions(condition as Record<string, unknown>, context)
 
     return {
       success: true,
@@ -435,7 +435,7 @@ export class WorkflowEngine {
 
     // Simple condition evaluation - in production you'd want a more robust evaluator
     const { field, operator, value } = conditions
-    const fieldValue = context.stepResults[field]
+    const fieldValue = context.stepResults[field as string]
 
     switch (operator) {
       case 'equals':
@@ -474,7 +474,7 @@ export class WorkflowEngine {
    * Get value by dot notation path
    */
   private getValueByPath(obj: Record<string, unknown>, path: string): unknown {
-    return path.split('.').reduce((current, key) => current?.[key], obj)
+    return path.split('.').reduce((current: any, key) => current?.[key], obj as any)
   }
 
   /**
